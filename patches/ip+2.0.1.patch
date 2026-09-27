@@ -1,0 +1,29 @@
+diff --git a/node_modules/ip/lib/ip.js b/node_modules/ip/lib/ip.js
+index 9022443..5cd3219 100644
+--- a/node_modules/ip/lib/ip.js
++++ b/node_modules/ip/lib/ip.js
+@@ -330,7 +330,23 @@ ip.isPrivate = function (addr) {
+     || /^f[cd][0-9a-f]{2}:/i.test(addr)
+     || /^fe80:/i.test(addr)
+     || /^::1$/.test(addr)
+-    || /^::$/.test(addr);
++    || /^::$/.test(addr)
++    // --- FIX SSRF GHSA-2p57-rm9w-gvfp : plages special-use != publiques ---
++    || /^(::f{4}:)?0\./i.test(addr)                                       // 0.0.0.0/8
++    || /^(::f{4}:)?100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./i.test(addr) // 100.64.0.0/10 CGNAT
++    || /^(::f{4}:)?192\.0\.0\./i.test(addr)                              // 192.0.0.0/24
++    || /^(::f{4}:)?192\.0\.2\./i.test(addr)                              // TEST-NET-1
++    || /^(::f{4}:)?198\.51\.100\./i.test(addr)                           // TEST-NET-2
++    || /^(::f{4}:)?203\.0\.113\./i.test(addr)                            // TEST-NET-3
++    || /^(::f{4}:)?192\.88\.99\./i.test(addr)                            // 6to4 relay
++    || /^(::f{4}:)?198\.(1[89])\./i.test(addr)                            // 198.18.0.0/15 bench
++    || /^(::f{4}:)?(22[4-9]|23\d)\./i.test(addr)                          // 224.0.0.0/4 multicast
++    || /^(::f{4}:)?(24\d|25[0-5])\./i.test(addr)                          // 240.0.0.0/4 reserve
++    || /^(::f{4}:)?255\.255\.255\.255/i.test(addr)                       // broadcast
++    || /^2001:/i.test(addr)                                                 // 2001::/23 Teredo/ORCHID
++    || /^3fff:/i.test(addr)                                                 // 3fff::/20 docs
++    || /^5f00:/i.test(addr)                                                 // 5f00::/16 SRv6
++    || /^ff[0-9a-f]{2}:/i.test(addr);                                       // ff00::/8 multicast
+ };
+ 
+ ip.isPublic = function (addr) {

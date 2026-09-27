@@ -1,0 +1,564 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Play, Trash2, ArrowLeft, Dices } from 'lucide-react'
+import type { LibraryItem, MediaType, MetaPreview, WatchProgress } from '@/types'
+import { fetchCatalog, MOVIE_GENRES, GENRE_FR } from '@/lib/cinemeta'
+import { fetchAddonCatalog, getAddonCatalogs } from '@/lib/addons'
+import { useLibrary, useProgress } from '@/lib/library'
+import { fetchRecs } from '@/lib/tmdbApi'
+import { useNav } from '@/lib/nav'
+import { useStored } from '@/lib/store'
+import Hero from '@/components/Hero'
+import Row from '@/components/Row'
+import PosterCard from '@/components/PosterCard'
+import type { InstalledAddon } from '@/types'
+
+/** Révèle la section quand elle entre dans le viewport (fade + montée). */
+function Reveal({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setVisible(true)
+          obs.disconnect()
+        }
+      },
+      { rootMargin: '0px 0px -60px 0px', threshold: 0.05 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return <div ref={ref} className={`reveal ${visible ? 'is-visible' : ''}`}>{children}</div>
+}
+
+/** Rangée fantôme affichée pendant le chargement des catalogues. */
+function RowSkeleton() {
+  return (
+    <section className="cv-auto">
+      <div className="mb-3 px-5 md:px-12">
+        <div className="skeleton h-3 w-32 rounded" />
+      </div>
+      <div className="flex gap-3 overflow-hidden px-5 md:px-12 pb-4 pt-1">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="skeleton aspect-[2/3] w-32 shrink-0 rounded-lg md:w-40" />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** Rangée "Continuer à regarder" affichée en haut de l'accueil. */
+function fmtRemaining(sec: number): string {
+  const mins = Math.max(1, Math.ceil(sec / 60))
+  if (mins < 90) return `${mins} MIN`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m === 0 ? `${h} H` : `${h} H ${String(m).padStart(2, '0')}`
+}
+
+function fmtClock(sec: number): string {
+  const s = Math.max(0, Math.floor(sec))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const r = s % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`
+    : `${m}:${String(r).padStart(2, '0')}`
+}
+
+function ContinueRow() {
+  const { continueWatching, remove } = useProgress()
+  const { play } = useNav()
+  if (continueWatching.length === 0) return null
+  return (
+    <section className="cv-auto">
+      <div className="mb-3 px-5 md:px-12">
+        <h2 className="row-title px-5 md:px-0">Continuer à regarder</h2>
+      </div>
+      <div className="flex gap-3 overflow-x-auto px-5 md:px-12 pb-4">
+        {continueWatching.map((p) => {
+          const pct = Math.min(100, (p.time / (p.duration || 1)) * 100)
+          const remaining = Math.max(0, (p.duration || 0) - p.time)
+          return (
+            <div
+              key={p.id}
+              className="group relative w-64 shrink-0 rounded-md border border-white/8 bg-white/[0.03] p-3 transition-all hover:border-[rgb(var(--acc))]/50 hover:shadow-[0_0_32px_rgba(var(--acc),0.18)]"
+            >
+              <button
+                onClick={() =>
+                  p.stream &&
+                  play({
+                    stream: p.stream,
+                    meta: { id: p.id, baseId: p.baseId, type: p.type, name: p.name, poster: p.poster, background: p.background },
+                    episodeLabel: p.episodeLabel,
+                    startAt: p.time,
+                  })
+                }
+                className="relative block w-full aspect-video overflow-hidden rounded bg-white/5"
+              >
+                {(p.background || p.poster) && (
+                  <img src={p.background ?? p.poster} alt="" className="h-full w-full object-cover" loading="lazy" />
+                )}
+                {/* Badge temps restant */}
+                <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wider text-[rgb(var(--acc2))] backdrop-blur-sm border border-[rgb(var(--acc2))]/25">
+                  RESTE {fmtRemaining(remaining)}
+                </span>
+                {/* Numéro d'épisode en gros pour les séries */}
+                {p.episodeLabel && (
+                  <span className="absolute left-2 bottom-2 font-display text-lg font-semibold tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+                    {p.episodeLabel}
+                  </span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Play size={26} className="text-[rgb(var(--acc))]" fill="currentColor" />
+                </span>
+                {/* Barre de progression aurore */}
+                <span className="absolute bottom-0 inset-x-0 h-[3px] bg-white/20">
+                  <span
+                    className="block h-full bg-gradient-to-r from-[rgb(var(--acc4))] via-[rgb(var(--acc2))] to-[rgb(var(--acc3))] shadow-[0_0_8px_rgba(255, 138, 138,0.7)]"
+                    style={{ width: `${pct}%` }}
+                  />
+                </span>
+              </button>
+              <div className="mt-2 flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{p.name}</p>
+                  <p className="text-[11px] font-mono text-white/40">
+                    Reprendre à <span className="text-[rgb(var(--acc))]/90">{fmtClock(p.time)}</span>
+                    {' · '}
+                    <span className="text-[rgb(var(--acc))]/80">{Math.round(pct)}%</span>
+                  </p>
+                </div>
+                <button onClick={() => remove(p.id)} className="p-1 text-white/25 hover:text-red-400" aria-label="Retirer">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+/** Rangée alimentée par le catalogue d'un addon installé. */
+function AddonRow({ addon, type, id, name }: { addon: InstalledAddon; type: string; id: string; name: string }) {
+  const { go } = useNav()
+
+  const [items, setItems] = useState<MetaPreview[]>([])
+  useEffect(() => {
+    fetchAddonCatalog(addon.url, type, id).then(setItems).catch(() => {})
+  }, [addon.url, type, id])
+  if (!items.length) return null
+  return (
+    <Row
+      title={`${addon.manifest.name} — ${name}`}
+      items={items}
+      onSeeAll={() =>
+        go({
+          name: 'catalog',
+          title: name,
+          // Type du catalogue TEL QUEL (« movie », « series », « Marvel »…) :
+          // l'URL de pagination de l'addon en dépend.
+          type,
+          addonUrl: addon.url,
+          catalogId: id,
+        })
+      }
+    />
+  )
+}
+
+/**
+ * Recommandations personnalisées (TMDB) : la graine est le titre le plus
+ * récent de la liste ou de l'historique de l'utilisateur. Synchronisée
+ * entre appareils via le code de synchro, elle suit donc ses goûts partout.
+ */
+function ForYouRow() {
+  const { items: library } = useLibrary()
+  const { items: progress } = useProgress()
+  const [recs, setRecs] = useState<MetaPreview[]>([])
+  const [seedName, setSeedName] = useState('')
+
+  // Multi-graines : jusqu'à 3 titres de l'historique (bibliothèque +
+  // progression) → recommandations fusionnées, dédupliquées — bien plus
+  // personnalisé qu'une seule graine.
+  const seeds = useMemo(() => {
+    const out: { id: string; name: string }[] = []
+    const seen = new Set<string>()
+    const push = (id: string | undefined, name: string) => {
+      if (id && /^tt\d+/.test(id) && !seen.has(id)) {
+        seen.add(id)
+        out.push({ id, name })
+      }
+    }
+    for (const i of library.slice(0, 5)) push(i.id, i.name)
+    for (const x of progress.slice(0, 8)) push(x.baseId, x.name)
+    return out.slice(0, 3)
+  }, [library, progress])
+
+  useEffect(() => {
+    if (seeds.length === 0) return
+    let alive = true
+    void Promise.allSettled(seeds.map((s) => fetchRecs(s.id))).then((results) => {
+      if (!alive) return
+      const merged: MetaPreview[] = []
+      const seenIds = new Set<string>()
+      for (const r of results) {
+        if (r.status !== 'fulfilled') continue
+        for (const x of r.value) {
+          if (!seenIds.has(x.id)) {
+            seenIds.add(x.id)
+            merged.push(x)
+          }
+        }
+      }
+      setRecs(merged.slice(0, 24))
+      setSeedName(seeds[0]?.name ?? '')
+    })
+    return () => { alive = false }
+  }, [seeds])
+
+  if (seeds.length === 0 || recs.length === 0) return null
+  return (
+    <Row
+      title={seeds.length > 1 ? 'Recommandé pour toi' : `Parce que tu as aimé « ${seedName} »`}
+      items={recs}
+    />
+  )
+}
+
+/** Pioche un titre au hasard dans le pool et ouvre sa fiche. */
+function pickSurprise(pool: { id: string; type: 'movie' | 'series' }[], library: LibraryItem[], progress: WatchProgress[], go: (v: { name: 'detail'; type: 'movie' | 'series'; id: string }) => void): void {
+  if (pool.length === 0) return
+
+  // MODE SOIRÉE INTELLIGENT : pondère le hasard par tes goûts réels.
+  // 1) Les titres dont le TYPE (film/série) domine ta bibliothèque ont 2×
+  //    plus de chances — on te propose ce que tu aimes vraiment.
+  // 2) On exclut ce que tu as déjà regardé récemment (historique), pour
+  //    ne pas retomber sur un vu il y a 2 jours.
+  const libTypeCount = { movie: 0, series: 0 }
+  for (const it of library) if (it.type === 'movie' || it.type === 'series') libTypeCount[it.type]++
+  const dominantType = libTypeCount.movie >= libTypeCount.series ? 'movie' : 'series'
+  const recentIds = new Set(progress.slice(-12).map((p) => p.baseId ?? p.id))
+
+  const weighted = pool.map((m) => ({
+    m,
+    w: (m.type === dominantType ? 2 : 1) * (recentIds.has(m.id) ? 0 : 1),
+  }))
+  const playable = weighted.filter((x) => x.w > 0)
+  if (playable.length === 0) {
+    const pick = pool[Math.floor(Math.random() * pool.length)]
+    go({ name: 'detail', type: pick.type, id: pick.id })
+    return
+  }
+  const totalW = playable.reduce((s, x) => s + x.w, 0)
+  let r = Math.random() * totalW
+  for (const x of playable) {
+    r -= x.w
+    if (r <= 0) {
+      go({ name: 'detail', type: x.m.type, id: x.m.id })
+      return
+    }
+  }
+  const fallback = playable[playable.length - 1].m
+  go({ name: 'detail', type: fallback.type, id: fallback.id })
+}
+
+export default function Home() {
+  const { go } = useNav()
+  const { items: libraryItems } = useLibrary()
+  const { items: progressItems } = useProgress()
+
+  // « Surprends-moi » : la logique d'impureté (Math.random) vit au niveau
+  // module pour satisfaire la règle de pureté du rendu React.
+  const surprise = () => {
+    const pool = [...movies, ...series].filter((m) => Number(m.imdbRating ?? 0) >= 6)
+    pickSurprise(pool, libraryItems, progressItems, go)
+  }
+
+  const [movies, setMovies] = useState<MetaPreview[]>([])
+  const [series, setSeries] = useState<MetaPreview[]>([])
+  const [action, setAction] = useState<MetaPreview[]>([])
+  const [scifi, setScifi] = useState<MetaPreview[]>([])
+  const [animes, setAnimes] = useState<MetaPreview[]>([])
+  const [comedy, setComedy] = useState<MetaPreview[]>([])
+  const [drama, setDrama] = useState<MetaPreview[]>([])
+  const [error, setError] = useState(false)
+  const [addons] = useStored<InstalledAddon[]>('novastream:addons', [])
+  const addonCatalogs = getAddonCatalogs()
+
+  // Rangée « Animes du moment » : catalogue Kitsu (découverte) mappé sur les
+  // IDs IMDb — détail, streams ⚡ et sous-titres passent par le pipeline
+  // existant sans aucune modification.
+  useEffect(() => {
+    let alive = true
+    fetch('https://anime-kitsu.strem.fun/catalog/anime/top.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { metas?: Array<{ imdb_id?: string; type?: string; name?: string; poster?: string }> }) => {
+        if (!alive || !j?.metas) return
+        setAnimes(
+          j.metas
+            .filter((x) => x.imdb_id && /^tt\d+/.test(x.imdb_id))
+            .map((x) => ({ id: x.imdb_id as string, type: (x.type === 'movie' ? 'movie' : 'series') as 'movie' | 'series', name: x.name ?? 'Anime', poster: x.poster })),
+        )
+      })
+      .catch(() => { /* silencieux : la rangée reste cachée */ })
+    return () => { alive = false }
+  }, [])
+  void addons // rafraîchit les rangées d'addons quand la liste change
+
+  useEffect(() => {
+    Promise.allSettled([
+      fetchCatalog('movie'),
+      fetchCatalog('series'),
+      fetchCatalog('movie', { genre: 'Action' }),
+      fetchCatalog('movie', { genre: 'Science Fiction' }),
+      fetchCatalog('movie', { genre: 'Comedy' }),
+      fetchCatalog('series', { genre: 'Drama' }),
+    ]).then(([m, s, a, sf, c, d]) => {
+      if (m.status === 'fulfilled') setMovies(m.value)
+      if (s.status === 'fulfilled') setSeries(s.value)
+      if (a.status === 'fulfilled') setAction(a.value)
+      if (sf.status === 'fulfilled') setScifi(sf.value)
+      if (c.status === 'fulfilled') setComedy(c.value)
+      if (d.status === 'fulfilled') setDrama(d.value)
+      if (m.status === 'rejected' && s.status === 'rejected') setError(true)
+    })
+  }, [])
+
+  return (
+    <div>
+      <Hero items={[...movies.slice(0, 3), ...series.slice(0, 3)]} />
+      <div className="relative z-10 -mt-16 space-y-10 pb-24">
+        {error && (
+          <p className="px-5 md:px-12 text-white/40 text-sm">
+            Impossible de joindre le catalogue de métadonnées. Vérifie ta connexion.
+          </p>
+        )}
+        <div className="px-5 md:px-12">
+          <button
+            onClick={surprise}
+            disabled={movies.length === 0 && series.length === 0}
+            className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/80 transition-colors hover:border-[rgb(var(--acc))] hover:text-[rgb(var(--acc))] disabled:opacity-40"
+            title="Lancer un film ou une série au hasard"
+          >
+            <Dices size={16} />
+            Mode soirée 🎲
+          </button>
+        </div>
+        <ContinueRow />
+        <ForYouRow />
+        {/* Skeletons pendant le chargement initial des catalogues */}
+        {movies.length === 0 && !error && (
+          <>
+            <RowSkeleton />
+            <RowSkeleton />
+          </>
+        )}
+        <Row title="Top 10 films" items={movies.slice(0, 10)} numbered
+          onSeeAll={() => go({ name: 'catalog', title: 'Films populaires', type: 'movie' })} />
+        <Row title="Top 10 séries" items={series.slice(0, 10)} numbered
+          onSeeAll={() => go({ name: 'catalog', title: 'Séries populaires', type: 'series' })} />
+        {addonCatalogs.map((c) => (
+          <Reveal key={`${c.addon.url}-${c.type}-${c.id}`}>
+            <AddonRow addon={c.addon} type={c.type} id={c.id} name={c.name} />
+          </Reveal>
+        ))}
+        {animes.length > 0 && <Row title="Animes du moment" items={animes} />}
+
+        <Reveal><Row title="Films populaires" items={movies.slice(10)}
+          onSeeAll={() => go({ name: 'catalog', title: 'Films populaires', type: 'movie' })} /></Reveal>
+        <Reveal><Row title="Séries populaires" items={series.slice(10)}
+          onSeeAll={() => go({ name: 'catalog', title: 'Séries populaires', type: 'series' })} /></Reveal>
+        <Reveal><Row title="Action" items={action}
+          onSeeAll={() => go({ name: 'catalog', title: 'Action', type: 'movie', genre: 'Action' })} /></Reveal>
+        <Reveal><Row title="Science-fiction" items={scifi}
+          onSeeAll={() => go({ name: 'catalog', title: 'Science-fiction', type: 'movie', genre: 'Science Fiction' })} /></Reveal>
+        <Reveal><Row title="Comédies" items={comedy}
+          onSeeAll={() => go({ name: 'catalog', title: 'Comédies', type: 'movie', genre: 'Comedy' })} /></Reveal>
+        <Reveal><Row title="Séries dramatiques" items={drama}
+          onSeeAll={() => go({ name: 'catalog', title: 'Séries dramatiques', type: 'series', genre: 'Drama' })} /></Reveal>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Page catalogue complète : TOUTE la palette d'une catégorie en grille,
+ * paginée. Deux sources possibles : Cinemeta (Films / Séries / genres) ou le
+ * catalogue d'un addon installé (Nuvio, Streaming Catalogs…), auquel cas le
+ * titre et le bouton Retour sont affichés.
+ */
+export function CatalogPage({
+  type,
+  title,
+  genre: initialGenre,
+  addonUrl,
+  catalogId,
+}: {
+  /** 'movie' | 'series' pour Cinemeta ; chaîne libre pour un catalogue d'addon. */
+  type: string
+  title?: string
+  genre?: string
+  addonUrl?: string
+  catalogId?: string
+}) {
+  const { back } = useNav()
+  const [items, setItems] = useState<MetaPreview[]>([])
+  const [genre, setGenre] = useState<string | null>(initialGenre ?? null)
+  const [skip, setSkip] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  // Filtres avancés (appliqués côté client sur les pages chargées)
+  const [minYear, setMinYear] = useState(0)
+  const [minRating, setMinRating] = useState(0)
+  const isAddon = !!addonUrl && !!catalogId
+  // IDs déjà vus : un addon qui ignore « skip » renvoie la même 1ʳᵉ page en
+  // boucle — sans dédoublonnage, « Charger plus » tournerait à vide.
+  const seenRef = useRef<Set<string>>(new Set())
+
+  const load = (g: string | null, s: number, append: boolean) => {
+    setLoading(true)
+    const promise = isAddon
+      ? fetchAddonCatalog(addonUrl, type, catalogId, s)
+      : fetchCatalog(type as MediaType, { genre: g ?? undefined, skip: s })
+    promise
+      .then((res) => {
+        if (!append) seenRef.current = new Set()
+        const fresh = res.filter((r) => !seenRef.current.has(r.id))
+        fresh.forEach((r) => seenRef.current.add(r.id))
+        setItems((prev) => (append ? [...prev, ...fresh] : fresh))
+        // Moins d'une vingtaine de NOUVEAUTÉS → plus rien à charger ensuite.
+        setHasMore(fresh.length >= 20)
+      })
+      .catch(() => setHasMore(false))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    setItems([])
+    setSkip(0)
+    load(genre, 0, false)
+    window.scrollTo(0, 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genre, type, addonUrl, catalogId])
+
+  const filtered = items.filter((m) => {
+    if (minYear > 0) {
+      const y = parseInt(String(m.releaseInfo ?? '').slice(0, 4), 10)
+      if (!y || y < minYear) return false
+    }
+    if (minRating > 0) {
+      const r = parseFloat(m.imdbRating ?? '0')
+      if (!r || r < minRating) return false
+    }
+    return true
+  })
+
+  return (
+    <div className="px-5 md:px-12 pt-28 pb-24 min-h-screen">
+      {title && (
+        <button
+          onClick={back}
+          className="mb-6 flex min-h-[44px] items-center gap-2 rounded-full border border-white/25 bg-black/85 px-5 text-sm font-mono-label font-semibold text-white/95 shadow-lg transition-colors hover:text-[rgb(var(--acc))] hover:border-[rgb(var(--acc))]/60"
+        >
+          <ArrowLeft size={16} /> RETOUR
+        </button>
+      )}
+      
+      <h1 className="font-display text-4xl md:text-6xl font-black tracking-tight">
+        {title ?? (type === 'movie' ? 'Films' : 'Séries')}
+      </h1>
+
+      {/* Sélecteur de genre : uniquement pour les catalogues Cinemeta
+          (les catalogues d'addons ont leur propre contenu éditorial) */}
+      {!isAddon && (
+      <div className="mt-8 flex flex-wrap gap-2">
+        <button
+          onClick={() => setGenre(null)}
+          className={`rounded-full border px-4 py-1.5 text-xs transition-colors ${
+            genre === null
+              ? 'border-[rgb(var(--acc))] bg-[rgb(var(--acc))] text-white font-bold'
+              : 'border-white/15 text-white/60 hover:border-white/40'
+          }`}
+        >
+          Tout
+        </button>
+        {MOVIE_GENRES.map((g) => (
+          <button
+            key={g}
+            onClick={() => setGenre(g)}
+            className={`rounded-full border px-4 py-1.5 text-xs transition-colors ${
+              genre === g
+                ? 'border-[rgb(var(--acc))] bg-[rgb(var(--acc))] text-white font-bold'
+                : 'border-white/15 text-white/60 hover:border-white/40'
+            }`}
+          >
+            {GENRE_FR[g] ?? g}
+          </button>
+        ))}
+      </div>
+      )}
+
+      {/* Filtres avancés : année minimum + note minimum */}
+      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs">
+        <div className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1.5">
+          <span className="text-white/50">Année ≥</span>
+          <select
+            value={minYear}
+            onChange={(e) => setMinYear(Number(e.target.value))}
+            className="bg-transparent text-[rgb(var(--acc))] font-mono outline-none cursor-pointer [&>option]:bg-[#0d0d0d]"
+          >
+            {[0, 2020, 2015, 2010, 2000, 1990, 1980].map((y) => (
+              <option key={y} value={y}>{y === 0 ? 'toutes' : y}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1.5">
+          <span className="text-white/50">Note ≥</span>
+          <select
+            value={minRating}
+            onChange={(e) => setMinRating(Number(e.target.value))}
+            className="bg-transparent text-[rgb(var(--acc))] font-mono outline-none cursor-pointer [&>option]:bg-[#0d0d0d]"
+          >
+            {[0, 6, 7, 8].map((r) => (
+              <option key={r} value={r}>{r === 0 ? 'toutes' : `${r}/10`}</option>
+            ))}
+          </select>
+        </div>
+        {(minYear > 0 || minRating > 0) && (
+          <span className="text-white/35 font-mono">
+            {filtered.length} résultat{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''} — charge plus de pages pour affiner
+          </span>
+        )}
+      </div>
+
+      <div className="mt-10 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
+        {filtered.map((m) => (
+          <PosterCard key={m.id} meta={m} />
+        ))}
+      </div>
+
+      {loading && (
+        <div className="flex justify-center py-10">
+          <div className="h-8 w-8 rounded-full border-2 border-white/15 border-t-[rgb(var(--acc))] animate-spin" />
+        </div>
+      )}
+
+      {!loading && hasMore && items.length > 0 && (
+        <div className="mt-10 flex justify-center">
+          <button
+            onClick={() => { const ns = skip + items.length; setSkip(ns); load(genre, ns, true) }}
+            className="rounded-sm border border-white/20 px-8 py-3 text-sm font-semibold hover:border-[rgb(var(--acc))] hover:text-[rgb(var(--acc))] transition-colors"
+          >
+            Charger plus
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}

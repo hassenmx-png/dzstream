@@ -1,0 +1,13 @@
+diff --git a/node_modules/uint8-util/dist/src/node.js b/node_modules/uint8-util/dist/src/node.js
+index cb9a0fa..04fa26b 100644
+--- a/node_modules/uint8-util/dist/src/node.js
++++ b/node_modules/uint8-util/dist/src/node.js
+@@ -9,7 +9,7 @@ export const base2arr = (str) => {
+     const buf = Buffer.from(str, 'base64');
+     return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+ };
+-export const arr2hex = (data) => Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString('hex');
++export const arr2hex = (data) => typeof data === 'string' ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString('hex');
+ export const hex2arr = (str) => {
+     const buf = Buffer.from(str, 'hex');
+     return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);

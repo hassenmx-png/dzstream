@@ -1,0 +1,98 @@
+{
+  "name": "DZ STREAM — Films, Séries & Streaming",
+  "short_name": "DZ STREAM",
+  "description": "Ton univers de streaming : films, séries, addons Stremio, sources premium debrid et lecture instantanée.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "categories": [
+    "entertainment",
+    "video"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "shortcuts": [
+    {
+      "name": "Accueil",
+      "url": "/#/",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ma liste",
+      "url": "/#/ma-liste",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Recherche",
+      "url": "/#/recherche",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Addons",
+      "url": "/#/addons",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/accueil.png",
+      "sizes": "1080x675",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Accueil de DZ STREAM : catalogue, Top 10 et rangées par genre"
+    },
+    {
+      "src": "/screenshots/interface.png",
+      "sizes": "1080x675",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "DZ STREAM : interface en français, thème bleu"
+    }
+  ]
+}
