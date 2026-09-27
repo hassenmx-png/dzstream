@@ -341,7 +341,9 @@ app.get("/proxy", async (c) => {
       return c.json({ error: "Lien premium refusé : clé debrid invalide ou expirée." }, 502, corsHeaders());
     }
     const outHeaders: Record<string, string> = { ...corsHeaders() };
-    for (const h of ["content-type", "content-length", "content-range", "accept-ranges"]) {
+    // NB : on NE copie PAS content-length — le corps est streamé (chunked) et un
+    // Content-Length en conflit casse HTTP/2 côté navigateur (connexion coupée).
+    for (const h of ["content-type", "content-range", "accept-ranges"]) {
       const v = upstream.headers.get(h);
       if (v) outHeaders[h] = v;
     }
