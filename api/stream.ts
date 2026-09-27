@@ -317,6 +317,7 @@ app.get("/torrent", async (c) => {
 
 app.get("/proxy", async (c) => {
   const url = c.req.query("url");
+  if (url && url.startsWith("/")) return c.redirect(url, 302);
   if (!url || !/^https?:\/\//.test(url)) return c.json({ error: "url invalide" }, 400);
 
   const headers: Record<string, string> = {
@@ -405,7 +406,7 @@ app.get("/debrid-check", async (c) => {
     try {
       const { execSync } = await import("node:child_process");
       const raw = execSync(
-        `docker exec mediaflow python3 -c "import urllib.request;print(urllib.request.urllopen('https://api.alldebrid.com/v4/user?agent=novastream&apikey=${encodeURIComponent(key)}',timeout=10).read().decode())"`,
+        `docker exec mediaflow python3 -c "import urllib.request;print(urllib.request.urlopen('https://api.alldebrid.com/v4/user?agent=novastream&apikey=${encodeURIComponent(key)}',timeout=10).read().decode())"`,
         { timeout: 15000 },
       ).toString();
       const j = JSON.parse(raw) as {
@@ -728,11 +729,15 @@ app.post("/wrap", async (c) => {
 });
 
 app.get("/play/:token", async (c) => {
-  const data = decodeToken(c.req.param("token"));
-  if (!data) return c.json({ error: "token invalide ou falsifié" }, 403);
+  const tok = c.req.param("token");
+  const data = decodeToken(tok);
+  if (!data) {
+    console.log("[play] 403 DECODE FAIL - longueur:", tok.length, "début:", tok.slice(0, 24));
+    return c.json({ error: "token invalide ou falsifié" }, 403);
+  }
   if (!data.u || !/^https?:\/\//.test(data.u)) return c.json({ error: "URL invalide" }, 400);
   if (data.e && data.e < Date.now()) return c.json({ error: "lien expiré (6 h max)" }, 410);
-  const target = data.u.replace("https://comet.dzstream.duckdns.org", "http://127.0.0.1:8000");
+  const target = data.u.replace("https://comet.dzstream.duckdns.org", "http://127.0.0.1:8001");
 
   // Passthrough : on stream tel quel en préservant les en-têtes de plage
   // (durée fiable + seek dans le player). Pas de transcode forcé.
@@ -746,6 +751,7 @@ app.get("/play/:token", async (c) => {
       },
       redirect: "follow",
     });
+    console.log("[play] target:", (data.u ?? "").slice(0, 80), "-> upstream:", upstream.status, upstream.url.slice(0, 80));
     const headers = new Headers();
     for (const h of ["content-type", "content-length", "content-range", "accept-ranges"]) {
       const v = upstream.headers.get(h);
