@@ -22,7 +22,7 @@ interface PushSub {
 
 let subs: PushSub[] = []
 try {
-  webpush.setVapidDetails('mailto:novastream@local', VAPID_PUBLIC, VAPID_PRIVATE)
+  webpush.setVapidDetails('mailto:dzstream@local', VAPID_PUBLIC, VAPID_PRIVATE)
   if (existsSync(SUBS_FILE)) subs = JSON.parse(readFileSync(SUBS_FILE, 'utf-8'))
 } catch (e) {
   console.warn('[push] init:', (e as Error).message)
@@ -92,7 +92,7 @@ async function scan(): Promise<void> {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
-          JSON.stringify({ title: 'NovaStream', body, icon: '/icons/icon-192.png', tag: 'novastream-ep' }),
+          JSON.stringify({ title: 'DZ STREAM', body, icon: '/icons/icon-192.png', tag: 'dzstream-ep' }),
         )
         console.log(`[push] notifié : ${nouvelles.length} épisode(s)`)
       } catch (e) {
