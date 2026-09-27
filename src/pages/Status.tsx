@@ -51,10 +51,11 @@ export default function StatusPage() {
       if (id === 'alldebrid') {
         const ad = getDebrids().find((d) => d.service === 'alldebrid')
         if (!ad) return 'ko'
-        const r = await fetch(`https://api.alldebrid.com/v4/user?agent=novastream&apikey=${encodeURIComponent(ad.key)}`)
-        if (!r.ok) return 'ko'
-        const j = await r.json()
-        return j?.status === 'success' ? 'ok' : 'ko'
+        // Via NOTRE serveur : la clé ne transite plus par le navigateur.
+        const r = await fetch('/api/stream/health?service=alldebrid', { signal: AbortSignal.timeout(8000) })
+        if (!r.ok) return 'ko' // ex. non authentifié (cookie)
+        const j = (await r.json()) as { ok?: boolean }
+        return j?.ok ? 'ok' : 'ko'
       }
       if (id === 'torrentio') {
         const r = await fetch('https://torrentio.strem.fun/', { signal: AbortSignal.timeout(8000) })
