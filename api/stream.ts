@@ -739,6 +739,14 @@ app.get("/play/:token", async (c) => {
   if (data.e && data.e < Date.now()) return c.json({ error: "lien expiré (6 h max)" }, 410);
   const target = data.u.replace("https://comet.dzstream.duckdns.org", "http://127.0.0.1:8001");
 
+  // Torrentio est derrière Cloudflare qui bloque les clients non-navigateur
+  // (empreinte TLS, UA trompeur ou pas). On redirige donc le VRAI navigateur
+  // directement : il passera la protection sans problème. La clé debrid dans
+  // l'URL est celle de l'utilisateur, déjà visible dans son propre navigateur.
+  if (/^https:\/\/torrentio\.strem\.fun\//.test(target)) {
+    return c.redirect(target, 302);
+  }
+
   // Passthrough : on stream tel quel en préservant les en-têtes de plage
   // (durée fiable + seek dans le player). Pas de transcode forcé.
   try {
