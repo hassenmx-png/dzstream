@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { Play, Users } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Stream } from '@/types'
 import {
   streamKind,
@@ -37,11 +38,176 @@ function QualityTag({ q }: { q: string }) {
   )
 }
 
+/** En-tête de groupe qualité. Espacement en padding (mesurable par le
+ *  virtualiseur, contrairement aux marges). */
+function QualityHeader({ q, first }: { q: string; first: boolean }) {
+  return (
+    <div className={`${first ? 'pt-0' : 'pt-1.5'} pb-0.5 text-[11px] font-bold tracking-wide text-white/50`}>
+      {q === 'SD' ? 'SD / AUTRE' : q}
+    </div>
+  )
+}
+
+/** Bouton de source : marquage STRICTEMENT identique à l'ancienne liste
+ *  (mêmes classes, mêmes badges) — juste extrait en composant. */
+function StreamButton({ s, recommended, onLaunch }: { s: Stream; recommended: boolean; onLaunch: (s: Stream) => void }) {
+  const kind = streamKind(s)
+  const seeders = streamSeeders(s)
+  return (
+    <button
+      onClick={() => onLaunch(s)}
+      className={`group w-full flex items-center gap-3 rounded-md border px-3 py-2.5 md:px-4 md:py-3 text-left transition-all hover:border-[rgb(var(--acc))]/50 hover:bg-[rgb(var(--acc))]/5 ${
+        recommended ? 'border-[rgb(var(--acc))]/60 bg-[rgb(var(--acc))]/[0.07]' : 'border-white/8 bg-white/[0.03]'
+      }`}
+    >
+      <span className="shrink-0 rounded-full bg-white/8 p-2 text-white/60 group-hover:bg-[rgb(var(--acc))] group-hover:text-white transition-colors">
+        <Play size={13} fill="currentColor" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">
+          {recommended && (
+            <span className="mr-2 rounded-sm bg-[rgb(var(--acc))] px-1.5 py-0.5 text-[10px] font-bold text-white align-middle">
+              ★ RECOMMANDÉ
+            </span>
+          )}
+          {makeStreamLabel(s)}
+        </p>
+        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-white/55 font-medium">
+          <span className="text-[rgb(var(--acc))]/80">{s.addonName}</span>
+          <span>{kind === 'torrent' ? '⬡ P2P Torrent' : kind === 'http' ? '⇄ Direct / HLS' : kind === 'youtube' ? '▶ YouTube' : '↗ Externe'}</span>
+          {kind === 'http' && !isDebridStream(s) && (
+            <span className="rounded-sm bg-sky-400/15 border border-sky-400/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sky-300">
+              ⚡ DÉMARRAGE IMMÉDIAT
+            </span>
+          )}
+          {isDebridStream(s) && (
+            <span className="rounded-sm bg-[rgb(var(--acc))]/15 border border-[rgb(var(--acc))]/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[rgb(var(--acc))]">
+              ⚡ PREMIUM
+            </span>
+          )}
+          {(() => {
+            const audio = streamAudio(s)
+            if (!audio) return null
+            const styles = {
+              VF: 'bg-[rgb(var(--acc))] text-white',
+              MULTI: 'border border-[rgb(var(--acc))]/50 text-[rgb(var(--acc))]',
+              VOSTFR: 'border border-white/25 text-white/60',
+            } as const
+            const labels = { VF: '🇫🇷 VF', MULTI: '🇫🇷 MULTI', VOSTFR: 'VOSTFR' } as const
+            return (
+              <span className={`rounded-sm px-2 py-0.5 text-[10px] font-semibold tracking-wide ${styles[audio]}`}>
+                {labels[audio]}
+              </span>
+            )
+          })()}
+          {(() => {
+            const t = `${s.title ?? ''} ${s.name ?? ''}`.toLowerCase()
+            return /\b(hevc|h[-.]?265|x265)\b/.test(t) ? (
+              <span
+                className="rounded-sm bg-fuchsia-500/15 border border-fuchsia-500/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-fuchsia-300"
+                title="Vidéo H.265/HEVC : image NOIRE sur ce téléphone (son OK) — choisis une source x264/H264"
+              >
+                🎥 H265
+              </span>
+            ) : null
+          })()}
+          {seeders > 0 && (
+            <span className={`flex items-center gap-1 ${seeders >= 20 ? 'text-[rgb(var(--acc))]' : 'text-amber-400/80'}`}>
+              <Users size={10} /> {seeders}
+            </span>
+          )}
+          {(s.behaviorHints?.videoSize || streamSize(s) > 0) && (
+            <span>{formatBytes(s.behaviorHints?.videoSize || streamSize(s))}</span>
+          )}
+        </p>
+      </div>
+      <QualityTag q={streamQuality(s)} />
+    </button>
+  )
+}
+
+type Row = { type: 'header'; q: string } | { type: 'stream'; s: Stream }
+
+/** Colonne virtualisée : seuls les éléments visibles (+ overscan) sont
+ *  montés dans le DOM — fluide même avec 300+ sources. */
+function VirtualColumn({
+  addonName,
+  items,
+  bestUrl,
+  onLaunch,
+}: {
+  addonName: string
+  items: Stream[]
+  bestUrl: string | null
+  onLaunch: (s: Stream) => void
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const rows = useMemo<Row[]>(() => {
+    const out: Row[] = []
+    let prev: string | null = null
+    for (const s of items) {
+      const q = normQ(s)
+      if (q !== prev) {
+        out.push({ type: 'header', q })
+        prev = q
+      }
+      out.push({ type: 'stream', s })
+    }
+    return out
+  }, [items])
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (i) => (rows[i].type === 'header' ? 22 : 68),
+    overscan: 12,
+  })
+
+  const debridCount = items.filter((s) => isDebridStream(s)).length
+  return (
+    <div className="w-[250px] md:w-[290px] shrink-0">
+      {/* En-tête de colonne : nom + compteurs (inchangé) */}
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="truncate font-display text-xs font-bold tracking-wider text-[rgb(var(--acc))]">
+          {addonName}
+        </span>
+        <span className="h-px flex-1 bg-white/10" />
+        <span className="text-xs font-semibold text-white/55 tracking-wide">
+          {items.length}
+          {debridCount > 0 && <span className="text-[rgb(var(--acc))]"> ⚡{debridCount}</span>}
+        </span>
+      </div>
+      <div ref={scrollRef} className="h-[56vh] max-h-[600px] overflow-y-auto pr-0.5">
+        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+          {virtualizer.getVirtualItems().map((vi) => {
+            const row = rows[vi.index]
+            return (
+              <div
+                key={vi.key}
+                data-index={vi.index}
+                ref={virtualizer.measureElement}
+                className="absolute left-0 top-0 w-full pb-1"
+                style={{ transform: `translateY(${vi.start}px)` }}
+              >
+                {row.type === 'header' ? (
+                  <QualityHeader q={row.q} first={vi.index === 0} />
+                ) : (
+                  <StreamButton s={row.s} recommended={bestUrl !== null && row.s.url === bestUrl} onLaunch={onLaunch} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
  * Sources affichées en COLONNES par addon (style Nuvio/Stremio) :
- * une colonne = un addon, scroll horizontal pour passer d'un addon à l'autre,
- * sous-sections qualité dans chaque colonne. Le bouton de source est identique
- * à la version liste verticale (mêmes classes, mêmes badges).
+ * une colonne = un addon, scroll horizontal pour passer d'un addon à
+ * l'autre, sous-sections qualité dans chaque colonne, VIRTUALISÉES
+ * (DOM léger même avec des centaines de sources).
  */
 export default function SourceColumns({
   streams,
@@ -64,111 +230,9 @@ export default function SourceColumns({
 
   return (
     <div className="flex gap-3 pb-1">
-      {groups.map(([addonName, items]) => {
-        const debridCount = items.filter((s) => isDebridStream(s)).length
-        return (
-          <div key={addonName} className="w-[250px] md:w-[290px] shrink-0">
-            {/* En-tête de colonne : nom + compteurs */}
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="truncate font-display text-xs font-bold tracking-wider text-[rgb(var(--acc))]">
-                {addonName}
-              </span>
-              <span className="h-px flex-1 bg-white/10" />
-              <span className="text-xs font-semibold text-white/55 tracking-wide">
-                {items.length}
-                {debridCount > 0 && <span className="text-[rgb(var(--acc))]"> ⚡{debridCount}</span>}
-              </span>
-            </div>
-            <div className="space-y-1">
-              {items.map((s, i) => {
-                const kind = streamKind(s)
-                const seeders = streamSeeders(s)
-                const recommended = bestUrl !== null && s.url === bestUrl
-                const q = normQ(s)
-                const prevQ = i > 0 ? normQ(items[i - 1]) : null
-                return (
-                  <div key={`${addonName}-${i}`}>
-                    {q !== prevQ && (
-                      <div className="mb-0.5 mt-1.5 first:mt-0 text-[11px] font-bold tracking-wide text-white/50">
-                        {q === 'SD' ? 'SD / AUTRE' : q}
-                      </div>
-                    )}
-                    <button
-                      onClick={() => onLaunch(s)}
-                      className={`group w-full flex items-center gap-3 rounded-md border px-3 py-2.5 md:px-4 md:py-3 text-left transition-all hover:border-[rgb(var(--acc))]/50 hover:bg-[rgb(var(--acc))]/5 ${
-                        recommended ? 'border-[rgb(var(--acc))]/60 bg-[rgb(var(--acc))]/[0.07]' : 'border-white/8 bg-white/[0.03]'
-                      }`}
-                    >
-                      <span className="shrink-0 rounded-full bg-white/8 p-2 text-white/60 group-hover:bg-[rgb(var(--acc))] group-hover:text-white transition-colors">
-                        <Play size={13} fill="currentColor" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {recommended && (
-                            <span className="mr-2 rounded-sm bg-[rgb(var(--acc))] px-1.5 py-0.5 text-[10px] font-bold text-white align-middle">
-                              ★ RECOMMANDÉ
-                            </span>
-                          )}
-                          {makeStreamLabel(s)}
-                        </p>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-white/55 font-medium">
-                          <span className="text-[rgb(var(--acc))]/80">{s.addonName}</span>
-                          <span>{kind === 'torrent' ? '⬡ P2P Torrent' : kind === 'http' ? '⇄ Direct / HLS' : kind === 'youtube' ? '▶ YouTube' : '↗ Externe'}</span>
-                          {kind === 'http' && !isDebridStream(s) && (
-                            <span className="rounded-sm bg-sky-400/15 border border-sky-400/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-sky-300">
-                              ⚡ DÉMARRAGE IMMÉDIAT
-                            </span>
-                          )}
-                          {isDebridStream(s) && (
-                            <span className="rounded-sm bg-[rgb(var(--acc))]/15 border border-[rgb(var(--acc))]/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[rgb(var(--acc))]">
-                              ⚡ PREMIUM
-                            </span>
-                          )}
-                          {(() => {
-                            const audio = streamAudio(s)
-                            if (!audio) return null
-                            const styles = {
-                              VF: 'bg-[rgb(var(--acc))] text-white',
-                              MULTI: 'border border-[rgb(var(--acc))]/50 text-[rgb(var(--acc))]',
-                              VOSTFR: 'border border-white/25 text-white/60',
-                            } as const
-                            const labels = { VF: '🇫🇷 VF', MULTI: '🇫🇷 MULTI', VOSTFR: 'VOSTFR' } as const
-                            return (
-                              <span className={`rounded-sm px-2 py-0.5 text-[10px] font-semibold tracking-wide ${styles[audio]}`}>
-                                {labels[audio]}
-                              </span>
-                            )
-                          })()}
-                          {(() => {
-                            const t = `${s.title ?? ''} ${s.name ?? ''}`.toLowerCase()
-                            return /\b(hevc|h[-.]?265|x265)\b/.test(t) ? (
-                              <span
-                                className="rounded-sm bg-fuchsia-500/15 border border-fuchsia-500/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-fuchsia-300"
-                                title="Vidéo H.265/HEVC : image NOIRE sur ce téléphone (son OK) — choisis une source x264/H264"
-                              >
-                                🎥 H265
-                              </span>
-                            ) : null
-                          })()}
-                          {seeders > 0 && (
-                            <span className={`flex items-center gap-1 ${seeders >= 20 ? 'text-[rgb(var(--acc))]' : 'text-amber-400/80'}`}>
-                              <Users size={10} /> {seeders}
-                            </span>
-                          )}
-                          {(s.behaviorHints?.videoSize || streamSize(s) > 0) && (
-                            <span>{formatBytes(s.behaviorHints?.videoSize || streamSize(s))}</span>
-                          )}
-                        </p>
-                      </div>
-                      <QualityTag q={streamQuality(s)} />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+      {groups.map(([addonName, items]) => (
+        <VirtualColumn key={addonName} addonName={addonName} items={items} bestUrl={bestUrl} onLaunch={onLaunch} />
+      ))}
     </div>
   )
 }

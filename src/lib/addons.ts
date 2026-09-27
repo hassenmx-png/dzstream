@@ -466,49 +466,32 @@ export function setDebridDown(down: boolean): void {
  * réseau (on ne punit pas une panne temporaire).
  */
 export async function checkDebridHealth(): Promise<void> {
-  ensurePresetDebrid() // les clés préinstallées doivent être en place avant le test
+  ensurePresetDebrid()
+  // Le contrôle de santé passe par NOTRE serveur : les clés ne quittent
+  // jamais le VPS (fin des appels directs api.alldebrid.com / api.torbox.app
+  // depuis le navigateur). Clés serveur : .env.local
+  // (ALLDEBRID_API_KEY / TORBOX_API_KEY). Fail-open : sans clé serveur ou
+  // réseau coupé, on ne masque JAMAIS les sources.
   await Promise.allSettled(getDebrids().map(async (d) => {
+    if (d.service !== 'alldebrid' && d.service !== 'torbox') return
     try {
-      if (d.service === 'alldebrid') {
-        const res = await fetch(
-          `https://api.alldebrid.com/v4/user?agent=novastream&apikey=${encodeURIComponent(d.key)}`,
-          { signal: AbortSignal.timeout(6000) },
-        )
-        const j = (await res.json()) as {
-          status: string
-          error?: { code?: string }
-          data?: { user?: { isPremium?: boolean } }
-        }
-        if (j.status === 'error') {
-          setServiceDownFlag(d.service, true)
-          toast(
-            j.error?.code === 'AUTH_USER_BANNED'
-              ? 'Compte AllDebrid suspendu — ses sources sont masquées, les autres services restent actifs.'
-              : 'Clé AllDebrid refusée — ses sources sont masquées, les autres services restent actifs.',
-          )
-        } else if (j.data?.user && !j.data.user.isPremium) {
-          setServiceDownFlag(d.service, true)
-          toast('Abonnement AllDebrid expiré — ses sources sont masquées, les autres services restent actifs.')
-        } else {
-          setServiceDownFlag(d.service, false) // compte rétabli → le premium revient tout seul
-        }
-      } else if (d.service === 'torbox') {
-        // TorBox : GET /v1/api/user/me (Bearer). Multi-IP explicitement
-        // autorisé chez eux — aucun risque de ban pour usage serveur léger,
-        // mais une clé révoquée doit quand même être masquée.
-        const res = await fetch('https://api.torbox.app/v1/api/user/me', {
-          headers: { Authorization: `Bearer ${d.key}` },
-          signal: AbortSignal.timeout(6000),
-        })
-        const j = (await res.json()) as { success?: boolean }
-        if (!res.ok || !j.success) {
-          setServiceDownFlag(d.service, true)
-          toast('Clé TorBox refusée — ses sources sont masquées, les autres services restent actifs.')
-        } else {
-          setServiceDownFlag(d.service, false)
-        }
+      const res = await fetch(`/api/stream/health?service=${d.service}`, { signal: AbortSignal.timeout(8000) })
+      if (!res.ok) return // ex. pas encore authentifié (cookie) : on ne change rien
+      const j = (await res.json()) as { ok: boolean; reason?: string }
+      if (j.ok) {
+        setServiceDownFlag(d.service, false) // compte rétabli → le premium revient tout seul
+        return
       }
-      // Autres services : la détection à la lecture (resolve-check) prend le relais.
+      if (j.reason === 'no-server-key' || j.reason === 'network' || j.reason === 'unknown-service') return
+      setServiceDownFlag(d.service, true)
+      const label = d.service === 'torbox' ? 'TorBox' : 'AllDebrid'
+      toast(
+        j.reason === 'banned'
+          ? `Compte ${label} suspendu — ses sources sont masquées, les autres services restent actifs.`
+          : j.reason === 'expired'
+            ? `Abonnement ${label} expiré — ses sources sont masquées, les autres services restent actifs.`
+            : `Clé ${label} refusée — ses sources sont masquées, les autres services restent actifs.`,
+      )
     } catch {
       /* réseau coupé : on ne change rien pour ce service */
     }

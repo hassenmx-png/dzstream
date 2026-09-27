@@ -9,3 +9,4 @@ dist/
 
 data/img-cache/
 *.bak
+data/debrid-addon.json

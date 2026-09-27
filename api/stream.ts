@@ -729,3 +729,31 @@ app.get("/play/:token", (c) => {
   const dest = `https://mediaflow.dzstream.duckdns.org/proxy/stream?api_password=${encodeURIComponent(MF_PW)}&transcode=true&d=${encodeURIComponent(target)}`;
   return c.redirect(dest, 302);
 });
+
+// ─── Santé debrid CÔTÉ SERVEUR : les clés ne transitent JAMAIS par le client ───
+app.get("/health", async (c) => {
+  const service = (c.req.query("service") || "alldebrid").toLowerCase();
+  const envName = service === "torbox" ? "TORBOX_API_KEY" : "ALLDEBRID_API_KEY";
+  const key = (process.env[envName] || "").trim();
+  if (!key) return c.json({ ok: true, reason: "no-server-key" });
+  try {
+    if (service === "torbox") {
+      const res = await fetch("https://api.torbox.app/v1/api/user/me", {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(6000),
+      });
+      const j = (await res.json()) as { success?: boolean };
+      if (!res.ok || !j.success) return c.json({ ok: false, reason: "invalid" });
+      return c.json({ ok: true });
+    }
+    const res = await fetch(`https://api.alldebrid.com/v4/user?agent=novastream&apikey=${encodeURIComponent(key)}`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    const j = (await res.json()) as { status: string; error?: { code?: string }; data?: { user?: { isPremium?: boolean } } };
+    if (j.status === "error") return c.json({ ok: false, reason: j.error?.code === "AUTH_USER_BANNED" ? "banned" : "invalid" });
+    if (j.data?.user && !j.data.user.isPremium) return c.json({ ok: false, reason: "expired" });
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ ok: true, reason: "network" }); // fail-open
+  }
+});
