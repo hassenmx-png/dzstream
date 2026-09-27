@@ -151,7 +151,7 @@ function AutoPlayPrefsBtn({ prefs, onChange }: { prefs: AutoPrefs; onChange: (p:
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative max-h-[75vh] w-80 space-y-3 overflow-y-auto rounded-lg border border-white/10 bg-[#0d0d0d] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}">>
+          <div className="relative max-h-[75vh] w-80 space-y-3 overflow-y-auto rounded-lg border border-white/10 bg-[#0d0d0d] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <p className="text-[10px] font-mono uppercase tracking-widest text-white/40">Lecture auto — règles de choix</p>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] text-white/60">Qualité max</span>
