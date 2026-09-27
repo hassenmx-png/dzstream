@@ -84,6 +84,12 @@ async function get<T>(path: string, timeoutMs = 10000): Promise<T | null> {
   }
 }
 
+/** Catalogue d'une plateforme de streaming (FR), IDs IMDB. */
+export async function fetchProviderCatalog(type: 'movie' | 'series', providerId: string): Promise<MetaPreview[]> {
+  const j = await get<{ items: MetaPreview[] }>(`/api/tmdb/discover-provider/${type}/${providerId}`)
+  return j?.items ?? []
+}
+
 export function fetchExtras(imdbId: string): Promise<TmdbExtras | null> {
   return get<TmdbExtras>(`/api/tmdb/extras/${imdbId}`)
 }

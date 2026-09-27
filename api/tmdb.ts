@@ -246,6 +246,34 @@ tmdbApp.get("/discover/:type/:genreId", async (c) => {
   return c.json(out);
 });
 
+/** Découverte par plateforme de streaming (catalogue FR), convertie en IDs IMDB. */
+tmdbApp.get("/discover-provider/:type/:providerId", async (c) => {
+  const type = c.req.param("type") === "tv" || c.req.param("type") === "series" ? "tv" : "movie";
+  const providerId = c.req.param("providerId") ?? "";
+  if (!/^\d+$/.test(providerId)) return c.json({ error: "plateforme invalide" }, 400);
+  const ck = `discprov:${type}:${providerId}`;
+  const hit = cached<object>(ck);
+  if (hit) return c.json(hit);
+  const j = await tmdb<{ results?: { id: number; title?: string; name?: string }[] }>(`/discover/${type}`, {
+    with_watch_providers: providerId,
+    watch_region: "FR",
+    sort_by: "popularity.desc",
+    "vote_count.gte": "100",
+    page: "1",
+  });
+  if (!j?.results) return c.json({ items: [] }, 502);
+  const items = (await Promise.all(j.results.slice(0, 18).map(async (r): Promise<object | null> => {
+    try {
+      const ext = await tmdb<{ imdb_id?: string }>(`/${type}/${r.id}/external_ids`);
+      if (!ext?.imdb_id) return null;
+      return { id: ext.imdb_id, type: type === "tv" ? "series" : "movie", name: r.title ?? r.name ?? "", poster: `https://images.metahub.space/poster/medium/${ext.imdb_id}/img` };
+    } catch { return null; }
+  }))).filter(Boolean);
+  const out = { items };
+  cache.set(ck, { v: out, exp: Date.now() + 86400000 });
+  return c.json(out);
+});
+
 tmdbApp.get("/extras/:imdbId", async (c) => {
   const imdbId = c.req.param("imdbId");
   if (!/^tt\d+$/.test(imdbId)) return c.json({ error: "id invalide" }, 400);
