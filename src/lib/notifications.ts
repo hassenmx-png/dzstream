@@ -81,11 +81,15 @@ export async function subscribePushServeur(
     const r = await fetch('/api/push/vapid-public-key')
     if (!r.ok) return false
     const { key } = await r.json()
+    // Désabonne d'abord tout ancien abonnement (clé périmée, ancien SW...) :
+    // subscribe() seul RETOURNE l'ancien abonnement sans le rafraîchir.
+    const existing = await reg.pushManager.getSubscription()
+    if (existing) await existing.unsubscribe()
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(key) as BufferSource,
     })
-    const payload = { ...(sub.toJSON() as Record<string, unknown>), series, vus }
+    const payload = { ...(sub.toJSON() as Record<string, unknown>), series, vus, vapidKeyUsed: key }
     await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
