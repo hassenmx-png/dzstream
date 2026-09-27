@@ -668,8 +668,10 @@ app.get("/transcode", async (c) => {
 
 export { app as streamApp };
 
-// ─── Flux opaques : /api/stream/wrap + /api/stream/play (secrets côté serveur) ───
-import { createHmac, timingSafeEqual } from "node:crypto";
+// ─── Flux opaques CHIFFRÉS : /wrap + /play (AES-256-GCM — illisible côté client) ───
+// Passthrough natif : Content-Length / Accept-Ranges / Content-Range préservés
+// (durée + seek fiables). Plus de transcode forcé ici — le cas AC3/DTS garde
+// sa route dédiée /transcode (ffprobe).
 const _require = createRequire(import.meta.url);
 
 // Charge .env.local au runtime (indépendant de systemd)
@@ -688,46 +690,73 @@ try {
 
 const STREAMING_SECRET = process.env.STREAMING_SECRET || "dzstream-dev-secret";
 const MF_PW = process.env.MEDIAFLOW_API_PASSWORD || "";
+const _crypto = _require("node:crypto") as typeof import("node:crypto");
+const ENC_KEY = _crypto.createHash("sha256").update(`${STREAMING_SECRET}:enc`).digest();
 
-function sign(payload: string): string {
-  return createHmac("sha256", STREAMING_SECRET).update(payload).digest("base64url");
-}
-function validSig(payload: string, sig: string): boolean {
-  const a = sign(payload);
-  return sig.length === a.length && timingSafeEqual(Buffer.from(sig), Buffer.from(a));
+/** Chiffre le payload (AES-256-GCM) : confidentiel ET inviolable. */
+function encodeToken(u: string): string {
+  const payload = Buffer.from(JSON.stringify({ u, e: Date.now() + 6 * 3600 * 1000 }));
+  const iv = _crypto.randomBytes(12);
+  const cipher = _crypto.createCipheriv("aes-256-gcm", ENC_KEY, iv);
+  const enc = Buffer.concat([cipher.update(payload), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), enc]).toString("base64url");
 }
 
-// Transforme une liste d'URL de flux en liens opaques /api/stream/play/<token> (batch)
+/** Déchiffre + authentifie le token. Null si falsifié ou corrompu. */
+function decodeToken(token: string): { u?: string; e?: number } | null {
+  try {
+    const raw = Buffer.from(token, "base64url");
+    if (raw.length < 29) return null;
+    const decipher = _crypto.createDecipheriv("aes-256-gcm", ENC_KEY, raw.subarray(0, 12));
+    decipher.setAuthTag(raw.subarray(12, 28));
+    const dec = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]);
+    return JSON.parse(dec.toString()) as { u?: string; e?: number };
+  } catch {
+    return null;
+  }
+}
+
 app.post("/wrap", async (c) => {
   let body: { urls?: unknown } = {};
   try { body = await c.req.json(); } catch {}
   const urls = Array.isArray(body.urls)
     ? body.urls.filter((u): u is string => typeof u === "string" && /^https?:\/\//.test(u) && u.length < 4096)
     : [];
-  const plays = urls.map((u) => {
-    const payload = Buffer.from(JSON.stringify({ u, e: Date.now() + 6 * 3600 * 1000 })).toString("base64url");
-    const code = c.req.query("code") || "";
-    return `/api/stream/play/${payload}.${sign(payload)}` + (code ? `?code=${encodeURIComponent(code)}` : "");
-  });
+  const code = c.req.query("code") || "";
+  const plays = urls.map((u) => `/api/stream/play/${encodeToken(u)}` + (code ? `?code=${encodeURIComponent(code)}` : ""));
   return c.json({ plays });
 });
 
-// Résout un lien opaque vers MediaFlow CÔTÉ SERVEUR (302 — le secret ne sort jamais)
-app.get("/play/:token", (c) => {
-  const token = c.req.param("token");
-  const i = token.lastIndexOf(".");
-  if (i < 1) return c.json({ error: "token invalide" }, 400);
-  const payload = token.slice(0, i);
-  const sig = token.slice(i + 1);
-  if (!validSig(payload, sig)) return c.json({ error: "signature invalide" }, 403);
-  let data: { u?: string; e?: number };
-  try { data = JSON.parse(Buffer.from(payload, "base64url").toString()); }
-  catch { return c.json({ error: "payload invalide" }, 400); }
+app.get("/play/:token", async (c) => {
+  const data = decodeToken(c.req.param("token"));
+  if (!data) return c.json({ error: "token invalide ou falsifié" }, 403);
   if (!data.u || !/^https?:\/\//.test(data.u)) return c.json({ error: "URL invalide" }, 400);
   if (data.e && data.e < Date.now()) return c.json({ error: "lien expiré (6 h max)" }, 410);
   const target = data.u.replace("https://comet.dzstream.duckdns.org", "http://127.0.0.1:8000");
-  const dest = `https://mediaflow.dzstream.duckdns.org/proxy/stream?api_password=${encodeURIComponent(MF_PW)}&transcode=true&d=${encodeURIComponent(target)}`;
-  return c.redirect(dest, 302);
+
+  // Passthrough : on stream tel quel en préservant les en-têtes de plage
+  // (durée fiable + seek dans le player). Pas de transcode forcé.
+  try {
+    const range = c.req.header("range");
+    const upstream = await fetch(target, {
+      headers: {
+        "Accept": "*/*",
+        "Accept-Encoding": "identity",
+        ...(range ? { "Range": range } : {}),
+      },
+      redirect: "follow",
+    });
+    const headers = new Headers();
+    for (const h of ["content-type", "content-length", "content-range", "accept-ranges"]) {
+      const v = upstream.headers.get(h);
+      if (v) headers.set(h, v);
+    }
+    if (!headers.has("Accept-Ranges")) headers.set("Accept-Ranges", "bytes");
+    headers.set("Cache-Control", "no-cache");
+    return new Response(upstream.body, { status: upstream.status, headers });
+  } catch {
+    return c.json({ error: "flux indisponible" }, 502);
+  }
 });
 
 // ─── Santé debrid CÔTÉ SERVEUR : les clés ne transitent JAMAIS par le client ───
