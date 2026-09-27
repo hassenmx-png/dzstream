@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSimklWatched } from '@/lib/simkl'
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, CalendarClock, Check, ChevronDown, Clock, Play, RefreshCw, Satellite, Star, Youtube, Users,
+  ArrowLeft, Bookmark, BookmarkCheck, CalendarClock, Check, ChevronDown, Clock, Play, RefreshCw, Satellite, SlidersHorizontal, Star, Youtube, Users,
 } from 'lucide-react'
 import type { Episode, MediaType, MetaFull, MetaPreview, Stream, SubtitleTrack } from '@/types'
 import { fetchCatalog, GENRE_FR } from '@/lib/cinemeta'
@@ -14,6 +14,7 @@ import { fetchMetaFr } from '@/lib/tmdbfr'
 import { fetchExtras, fetchRecs, type TmdbExtras } from '@/lib/tmdbApi'
 import { dominantColor, withAlpha } from '@/lib/color'
 import { useNav } from '@/lib/nav'
+import { readJSON, writeJSON } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import SourceColumns from '@/components/SourceColumns'
 import Row from '@/components/Row'
@@ -102,6 +103,81 @@ function SeasonPicker({
   )
 }
 
+/** Préférences de lecture automatique (style Nuvio), persistées. */
+type AutoPrefs = {
+  maxQ: 'any' | '4K' | '1080P' | '720P'
+  audio: 'any' | 'VF' | 'MULTI' | 'VOSTFR'
+  noHevc: boolean
+  minSeeders: number
+  autoOpen: boolean
+}
+const AUTO_DEFAULTS: AutoPrefs = { maxQ: 'any', audio: 'any', noHevc: false, minSeeders: 0, autoOpen: false }
+const AUTO_QS = [['any', 'MAXIMALE'], ['4K', '4K'], ['1080P', '1080p'], ['720P', '720p']] as const
+const AUTO_AUDIOS = [['any', 'INDIFF.'], ['VF', 'VF'], ['MULTI', 'MULTI'], ['VOSTFR', 'VOSTFR']] as const
+const AUTO_SEEDERS = [[0, 'AUCUN'], [5, '5+'], [10, '10+'], [20, '20+']] as const
+const AUTO_BOOL = [[false, 'NON'], [true, 'OUI']] as const
+
+/** Bouton + panneau des règles de choix automatique de la meilleure source. */
+function AutoPlayPrefsBtn({ prefs, onChange }: { prefs: AutoPrefs; onChange: (p: Partial<AutoPrefs>) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey) }
+  }, [open])
+  function seg<T extends string | number | boolean>(opts: readonly (readonly [T, string])[], val: T, set: (v: T) => void) {
+    return (
+      <div className="flex overflow-hidden rounded border border-white/15 text-[10px] font-mono">
+        {opts.map(([v, l]) => (
+          <button key={String(v)} onClick={() => set(v)} className={`px-2 py-1 transition-colors ${val === v ? 'bg-[rgb(var(--acc))] font-bold text-white' : 'text-white/50 hover:text-white'}`}>{l}</button>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        title="Préférences de lecture automatique"
+        aria-expanded={open}
+        className={`flex h-full min-h-[44px] items-center rounded-sm border px-3.5 transition-colors ${open ? 'border-[rgb(var(--acc))] text-[rgb(var(--acc))]' : 'border-white/25 bg-white/5 hover:bg-white/15'}`}
+      >
+        <SlidersHorizontal size={16} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-40 mt-2 w-72 space-y-3 rounded-md border border-white/10 bg-[#0d0d0d]/95 p-4 shadow-2xl backdrop-blur">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-white/40">Lecture auto — règles de choix</p>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-white/60">Qualité max</span>
+            {seg(AUTO_QS, prefs.maxQ, (v) => onChange({ maxQ: v }))}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-white/60">Audio préféré</span>
+            {seg(AUTO_AUDIOS, prefs.audio, (v) => onChange({ audio: v }))}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-white/60">Exclure HEVC/H265</span>
+            {seg(AUTO_BOOL, prefs.noHevc, (v) => onChange({ noHevc: v }))}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-white/60">Seeders min (P2P)</span>
+            {seg(AUTO_SEEDERS, prefs.minSeeders, (v) => onChange({ minSeeders: v }))}
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+            <span className="text-[11px] text-white/60">Lecture auto à l'ouverture</span>
+            {seg(AUTO_BOOL, prefs.autoOpen, (v) => onChange({ autoOpen: v }))}
+          </div>
+          <p className="text-[10px] leading-relaxed text-white/35">S'applique au bouton « Regarder », à l'enchaînement des épisodes et à la chaîne de repli.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 type SourceFilter = 'all' | 'torrent' | 'http'
 
 export default function DetailPage({ id, type }: { id: string; type: MediaType }) {
@@ -130,6 +206,32 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
   // 🎯 FR sûr : n'afficher que les sources dont le français est PROUVÉ
   // (VF explicite ou VOSTFR explicite dans le titre). Activé par défaut.
   const [frOnly, setFrOnly] = useState(true)
+  // Préférences de lecture auto (style Nuvio) : qualité max, audio préféré,
+  // exclusion HEVC, seeders minimum, lecture auto à l'ouverture.
+  const [autoPrefs, setAutoPrefs] = useState<AutoPrefs>(() => ({
+    ...AUTO_DEFAULTS,
+    ...readJSON<Partial<AutoPrefs>>('novastream:autoplay-prefs', {}),
+  }))
+  const updateAutoPrefs = (patch: Partial<AutoPrefs>) => {
+    const next = { ...autoPrefs, ...patch }
+    setAutoPrefs(next)
+    writeJSON('novastream:autoplay-prefs', next)
+    // Re-tri immédiat des sources déjà chargées selon les nouvelles règles
+    if (streams) setStreams((prev) => (prev ? [...prev].sort((a, b) => scoreWithPrefs(b) - scoreWithPrefs(a)) : prev))
+  }
+  const scoreWithPrefs = (s: Stream): number => {
+    const premium = !!getDebrid() && !isDebridDown() && isDebridStream(s)
+    let sc = watchabilityScore(s, { cloud: premium }) + (premium ? 2000 : 0)
+    if (autoPrefs.audio !== 'any' && streamAudio(s) === autoPrefs.audio) sc += 500
+    if (autoPrefs.noHevc && /(hevc|h[-.]?265|x265)/i.test(`${s.title ?? ''} ${s.name ?? ''}`)) sc -= 300
+    if (!premium && autoPrefs.minSeeders > 0 && (s.infoHash || streamKind(s) === 'torrent') && streamSeeders(s) < autoPrefs.minSeeders) sc -= 400
+    if (autoPrefs.maxQ !== 'any') {
+      const rank: Record<string, number> = { '720P': 2, '1080P': 3, '4K': 4, '8K': 5 }
+      const cap = autoPrefs.maxQ === '4K' ? 4 : autoPrefs.maxQ === '1080P' ? 3 : 2
+      if ((rank[streamQuality(s)] ?? 0) > cap) sc -= 800
+    }
+    return sc
+  }
   const { byId: ratingsById } = useRatings()
   const myRating = ratingsById.get(id) ?? null
   const [hoverStar, setHoverStar] = useState(0)
@@ -275,14 +377,8 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
     // (seeders élevés, taille raisonnable, 1080p/720p) plutôt que la plus lourde.
     // Quand un debrid est connecté, ses liens premium (cache instantané,
     // zéro pair nécessaire) passent devant tout le reste.
-    const debridOn = !!getDebrid() && !isDebridDown()
-    // Lien premium : servi par le cloud → la taille du fichier ne joue plus,
-    // la qualité et l'audio FR décident (cloud).
-    const scoreOf = (s: Stream) => {
-      const premium = debridOn && isDebridStream(s)
-      return watchabilityScore(s, { cloud: premium }) + (premium ? 2000 : 0)
-    }
-    all.sort((a, b) => scoreOf(b) - scoreOf(a))
+    // Tri selon les règles de lecture auto (préférences utilisateur).
+    all.sort((a, b) => scoreWithPrefs(b) - scoreWithPrefs(a))
     try {
       const httpOnly = all.filter((s) => (s.url ?? '').startsWith('http'))
       if (httpOnly.length) {
@@ -327,6 +423,14 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
     toast(`Lecture de la meilleure source : ${streamQuality(best)}${audio ? ` · ${audio}` : ''}`)
     void launch(best, undefined, currentEpisode, [], list)
   }
+
+  // Lecture auto à l'ouverture (préférence style Nuvio) : la fiche démarre
+  // toute seule sur la meilleure source dès qu'elle est prête.
+  useEffect(() => {
+    if (!autoPrefs.autoOpen || !meta || streams !== null || streamsLoading) return
+    void watchBest()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPrefs.autoOpen, meta, currentStreamId])
 
   useEffect(() => {
     setStreams(null)
@@ -398,7 +502,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
             const k = x.infoHash ?? x.url
             return k && k !== (s.infoHash ?? s.url) && !tried.includes(k)
           })
-          .sort((a, b) => watchabilityScore(b) - watchabilityScore(a))
+          .sort((a, b) => scoreWithPrefs(b) - scoreWithPrefs(a))
         // Mix obligatoire : les 4 meilleurs au global + 3 meilleurs HORS
         // premium. Si la clé debrid est refusée, les liens premium échouent
         // TOUS — sans ce mix, la chaîne de repli n'aurait que du premium et
@@ -419,7 +523,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
       // pioche dedans pour changer de langue audio à la volée.
       streamsPool: (list ?? streams ?? [])
         .slice()
-        .sort((a, b) => watchabilityScore(b) - watchabilityScore(a)),
+        .sort((a, b) => scoreWithPrefs(b) - scoreWithPrefs(a)),
       // startAt : quand l'utilisateur change de VERSION (langue) depuis le
       // lecteur, on reprend exactement où il en était.
       onFallback: (next, resumeAt) => { void launch(next, resumeAt, ep, [...tried, s.infoHash ?? s.url ?? ''], list) },
@@ -443,14 +547,8 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
     // (seeders élevés, taille raisonnable, 1080p/720p) plutôt que la plus lourde.
     // Quand un debrid est connecté, ses liens premium (cache instantané,
     // zéro pair nécessaire) passent devant tout le reste.
-    const debridOn = !!getDebrid() && !isDebridDown()
-    // Lien premium : servi par le cloud → la taille du fichier ne joue plus,
-    // la qualité et l'audio FR décident (cloud).
-    const scoreOf = (s: Stream) => {
-      const premium = debridOn && isDebridStream(s)
-      return watchabilityScore(s, { cloud: premium }) + (premium ? 2000 : 0)
-    }
-    all.sort((a, b) => scoreOf(b) - scoreOf(a))
+    // Tri selon les règles de lecture auto (préférences utilisateur).
+    all.sort((a, b) => scoreWithPrefs(b) - scoreWithPrefs(a))
     setStreams(all)
     if (all[0]) launch(all[0], undefined, next, [], all)
   }
@@ -640,6 +738,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                   {streamsLoading ? 'Recherche…' : 'Regarder'}
                 </button>
               )}
+              <AutoPlayPrefsBtn prefs={autoPrefs} onChange={updateAutoPrefs} />
               <button
                 onClick={() => {
                   toggle({ id, type, name: meta.name, poster: meta.poster })
