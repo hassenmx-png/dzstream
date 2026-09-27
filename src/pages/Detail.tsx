@@ -149,7 +149,7 @@ function AutoPlayPrefsBtn({ prefs, onChange }: { prefs: AutoPrefs; onChange: (p:
         <SlidersHorizontal size={16} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-40 mt-2 w-72 space-y-3 rounded-md border border-white/10 bg-[#0d0d0d]/95 p-4 shadow-2xl backdrop-blur">
+        <div className="absolute left-0 top-full z-50 mt-2 max-h-[60vh] w-72 space-y-3 overflow-y-auto rounded-md border border-white/10 bg-[#0d0d0d]/95 p-4 shadow-2xl backdrop-blur">
           <p className="text-[10px] font-mono uppercase tracking-widest text-white/40">Lecture auto — règles de choix</p>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] text-white/60">Qualité max</span>
