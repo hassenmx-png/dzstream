@@ -760,6 +760,11 @@ app.get("/play/:token", async (c) => {
       redirect: "follow",
     });
     console.log("[play] target:", (data.u ?? "").slice(0, 80), "-> upstream:", upstream.status, upstream.url.slice(0, 80));
+    // Page d'erreur en amont (ex. AllDebrid "Serveur non autorisé") : on
+    // renvoie un 502 JSON propre pour que le player passe à la source suivante.
+    if (!upstream.ok && (upstream.headers.get("content-type") ?? "").includes("text/html")) {
+      return c.json({ error: `flux indisponible en amont (HTTP ${upstream.status})` }, 502);
+    }
     const headers = new Headers();
     for (const h of ["content-type", "content-length", "content-range", "accept-ranges"]) {
       const v = upstream.headers.get(h);
@@ -800,3 +805,7 @@ app.get("/health", async (c) => {
     return c.json({ ok: true, reason: "network" }); // fail-open
   }
 });
+
+// Garde-fous : une erreur non gérée se logge, elle ne coupe jamais la connexion.
+process.on("unhandledRejection", (e) => console.error("[unhandledRejection]", e));
+process.on("uncaughtException", (e) => console.error("[uncaughtException]", e));
