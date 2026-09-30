@@ -731,6 +731,15 @@ app.post("/wrap", async (c) => {
 });
 
 app.get("/play/:token", async (c) => {
+  try {
+    return await handlePlay(c);
+  } catch (err) {
+    console.error("[play] EXCEPTION:", (err as Error)?.stack ?? String(err));
+    return c.json({ error: "erreur interne du lecteur" }, 500);
+  }
+});
+
+async function handlePlay(c: any) {
   const tok = c.req.param("token");
   const data = decodeToken(tok);
   if (!data) {
@@ -778,7 +787,7 @@ app.get("/play/:token", async (c) => {
   } catch {
     return c.json({ error: "flux indisponible" }, 502);
   }
-});
+}
 
 // ─── Santé debrid CÔTÉ SERVEUR : les clés ne transitent JAMAIS par le client ───
 app.get("/health", async (c) => {
