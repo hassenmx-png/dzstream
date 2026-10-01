@@ -274,6 +274,46 @@ tmdbApp.get("/discover-provider/:type/:providerId", async (c) => {
   return c.json(out);
 });
 
+/** Notes agrégées façon Nuvio : TMDB (toujours) + IMDb/RT/Metacritic (via OMDB). */
+tmdbApp.get("/ratings/:imdbId", async (c) => {
+  const imdbId = c.req.param("imdbId") ?? "";
+  if (!/^tt\d+$/.test(imdbId)) return c.json({ error: "id invalide" }, 400);
+  const ck = `ratings:${imdbId}`;
+  const hit = cached<object>(ck);
+  if (hit) return c.json(hit);
+  const out: Record<string, unknown> = {};
+  // TMDB : note + nombre de votes (résolution imdb_id)
+  try {
+    const found = await tmdb<{ movie_results?: { id: number }[]; tv_results?: { id: number }[] }>(`/find/${imdbId}`, { external_source: "imdb_id" });
+    const movie = found?.movie_results?.[0];
+    const tv = found?.tv_results?.[0];
+    const mid = movie?.id ?? tv?.id;
+    if (mid) {
+      const detail = await tmdb<{ vote_average?: number; vote_count?: number }>(`/${movie ? "movie" : "tv"}/${mid}`);
+      if (detail?.vote_average) out.tmdb = Math.round(detail.vote_average * 10) / 10;
+      if (detail?.vote_count) out.tmdbVotes = detail.vote_count;
+    }
+  } catch { /* silencieux */ }
+  // OMDB : IMDb (note+votes), Rotten Tomatoes, Metacritic
+  const omdbKey = (process.env.OMDB_API_KEY || "").trim();
+  if (omdbKey) {
+    try {
+      const r = await fetch(`https://www.omdbapi.com/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(omdbKey)}`, { signal: AbortSignal.timeout(8000) });
+      const j = await r.json() as { Response?: string; imdbRating?: string; imdbVotes?: string; Ratings?: { Source: string; Value: string }[] };
+      if (j?.Response === "True") {
+        if (j.imdbRating && j.imdbRating !== "N/A") out.imdb = j.imdbRating;
+        if (j.imdbVotes && j.imdbVotes !== "N/A") out.imdbVotes = j.imdbVotes;
+        for (const x of j.Ratings ?? []) {
+          if (x.Source === "Rotten Tomatoes") { out.rt = x.Value; out.rtVal = parseInt(x.Value, 10) || null; }
+          if (x.Source === "Metacritic") { out.metacritic = x.Value; out.mcVal = parseInt(x.Value, 10) || null; }
+        }
+      }
+    } catch { /* silencieux */ }
+  }
+  cache.set(ck, { v: out, exp: Date.now() + 86400000 });
+  return c.json(out);
+});
+
 tmdbApp.get("/extras/:imdbId", async (c) => {
   const imdbId = c.req.param("imdbId");
   if (!/^tt\d+$/.test(imdbId)) return c.json({ error: "id invalide" }, 400);

@@ -11,7 +11,7 @@ import {
 import { episodeStreamId, makeStreamLabel, useLibrary, useProgress } from '@/lib/library'
 import { setRating, useRatings } from '@/lib/ratings'
 import { fetchMetaFr } from '@/lib/tmdbfr'
-import { fetchExtras, fetchRecs, type TmdbExtras } from '@/lib/tmdbApi'
+import { fetchExtras, fetchRatings, type AggRatings, type TmdbExtras } from '@/lib/tmdbApi'
 import { dominantColor, withAlpha } from '@/lib/color'
 import { useNav } from '@/lib/nav'
 import { readJSON, writeJSON } from '@/lib/store'
@@ -178,6 +178,35 @@ function AutoPlayPrefsBtn({ prefs, onChange }: { prefs: AutoPrefs; onChange: (p:
         </div>
       )}
     </div>
+  )
+}
+
+/** Badges de notes agrégées (style Nuvio) à côté de l'étoile IMDb. */
+function RatingsBadges({ id }: { id: string }) {
+  const [r, setR] = useState<AggRatings | null>(null)
+  useEffect(() => {
+    if (!/^tt\d+/.test(id)) return
+    let alive = true
+    fetchRatings(id)
+      .then((x) => { if (alive) setR(x) })
+      .catch(() => { /* silencieux */ })
+    return () => { alive = false }
+  }, [id])
+  if (!r) return null
+  const badges: { label: string; value: string; cls: string }[] = []
+  if (r.tmdb) badges.push({ label: 'TMDB', value: String(r.tmdb), cls: 'border-emerald-400/50 text-emerald-300' })
+  if (r.imdb) badges.push({ label: 'IMDb', value: r.imdb, cls: 'border-amber-400/50 text-amber-300' })
+  if (r.rt) badges.push({ label: 'RT', value: r.rt, cls: (r.rtVal ?? 0) >= 60 ? 'border-lime-400/50 text-lime-300' : 'border-red-400/50 text-red-300' })
+  if (r.metacritic) badges.push({ label: 'Metacritic', value: r.metacritic, cls: 'border-yellow-400/50 text-yellow-300' })
+  if (!badges.length) return null
+  return (
+    <span className="flex flex-wrap items-center gap-1.5" title={r.tmdbVotes ? `${r.tmdbVotes.toLocaleString('fr-FR')} votes TMDB` : undefined}>
+      {badges.map((b) => (
+        <span key={b.label} className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-mono font-bold ${b.cls}`}>
+          <span className="opacity-60">{b.label}</span> {b.value}
+        </span>
+      ))}
+    </span>
   )
 }
 
@@ -711,6 +740,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                   <Star size={14} fill="currentColor" /> {meta.imdbRating}
                 </span>
               )}
+              <RatingsBadges id={id} />
               {meta.releaseInfo && <span>{meta.releaseInfo}</span>}
               {meta.runtime && (
                 <span className="flex items-center gap-1"><Clock size={13} /> {meta.runtime}</span>

@@ -90,6 +90,22 @@ export async function fetchProviderCatalog(type: 'movie' | 'series', providerId:
   return j?.items ?? []
 }
 
+/** Notes agrégées (style Nuvio). */
+export type AggRatings = {
+  imdb?: string | null
+  imdbVotes?: string | null
+  tmdb?: number | null
+  tmdbVotes?: number | null
+  rt?: string | null
+  rtVal?: number | null
+  metacritic?: string | null
+  mcVal?: number | null
+}
+export async function fetchRatings(imdbId: string): Promise<AggRatings | null> {
+  if (!/^tt\d+/.test(imdbId)) return null
+  return get<AggRatings>(`/api/tmdb/ratings/${imdbId}`)
+}
+
 export function fetchExtras(imdbId: string): Promise<TmdbExtras | null> {
   return get<TmdbExtras>(`/api/tmdb/extras/${imdbId}`)
 }
