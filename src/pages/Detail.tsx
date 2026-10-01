@@ -501,8 +501,24 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
       new Promise<SubtitleTrack[]>((resolve) => setTimeout(() => resolve([]), 6500)),
     ])
 
+    // Source P2P brute (infoHash sans URL) : on construit l'URL du moteur
+    // torrent du serveur, qui sert le fichier en HTTP direct. Sans ça, le
+    // player reçoit un flux sans URL et se referme instantanément — d'où le
+    // « clic qui ne fait rien ».
+    let playStream = s
+    if (!s.url && s.infoHash) {
+      const trs = (s.sources ?? [])
+        .filter((x) => x.startsWith('tracker:'))
+        .map((x) => x.slice('tracker:'.length))
+        .filter((x) => /^(udp|https?|wss?):\/\//.test(x))
+      const fileIdx = (s as unknown as { fileIdx?: number }).fileIdx
+      playStream = {
+        ...s,
+        url: `/api/stream/torrent?infoHash=${encodeURIComponent(s.infoHash.toLowerCase())}${typeof fileIdx === 'number' ? `&fileIdx=${fileIdx}` : ''}${trs.map((t) => `&tr=${encodeURIComponent(t)}`).join('')}`,
+      }
+    }
     play({
-      stream: s,
+      stream: playStream,
       meta: {
         id: ep && isSeries ? episodeStreamId(id, ep.season, ep.episode) : id,
         baseId: id,
