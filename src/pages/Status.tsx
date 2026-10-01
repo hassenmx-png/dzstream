@@ -3,6 +3,8 @@ import { Activity, CheckCircle2, RefreshCw, XCircle, AlertTriangle } from 'lucid
 import { getDebrids } from '@/lib/addons'
 import { getOpensubsKey } from '@/lib/opensubs'
 import { getSimkl } from '@/lib/simkl'
+import { useLibrary, useProgress } from '@/lib/library'
+import { requestNotificationPermission, subscribePushServeur } from '@/lib/notifications'
 
 type Health = 'ok' | 'ko' | 'pending'
 type Service = { id: string; name: string; detail: string }
@@ -16,6 +18,93 @@ const STATUS_META: Record<Health, { label: string; color: string; Icon: typeof C
 /** Page « Statut des services » : ping chaque service vital et affiche
  *  vert/orange/rouge. Permet de diagnostiquer en 2 secondes si un service
  *  tombe en panne (clé expirée, API down, réseau bloqué…). */
+/** Carte notifications push : abonne ce navigateur au scanner serveur
+ *  (alerte « S1E5 dispo » même avec l'app fermée, toutes les 6 h). */
+function PushNotifCard() {
+  const { items: libraryItems } = useLibrary()
+  const { items: progressItems } = useProgress()
+  const [state, setState] = useState<'init' | 'off' | 'on' | 'busy' | 'unsupported' | 'error'>('init')
+
+  useEffect(() => {
+    void (async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        setState('unsupported')
+        return
+      }
+      try {
+        const reg = await navigator.serviceWorker.ready
+        const sub = await reg.pushManager.getSubscription()
+        setState(sub ? 'on' : 'off')
+      } catch {
+        setState('off')
+      }
+    })()
+  }, [])
+
+  const activer = async () => {
+    setState('busy')
+    try {
+      const perm = await requestNotificationPermission()
+      if (!perm) { setState('error'); return }
+      const series = libraryItems
+        .filter((i) => i.type === 'series')
+        .map((i) => ({ id: i.id, name: i.name }))
+      const vus = progressItems.map((p) => p.id)
+      const ok = await subscribePushServeur(series, vus)
+      setState(ok ? 'on' : 'error')
+    } catch {
+      setState('error')
+    }
+  }
+
+  const desactiver = async () => {
+    setState('busy')
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) await sub.unsubscribe()
+    } catch { /* ignore */ }
+    setState('off')
+  }
+
+  if (state === 'unsupported') return null
+  return (
+    <div className="mt-8 rounded-md border border-white/10 bg-black/30 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-bold tracking-wide">🔔 Notifications d'épisodes</div>
+          <div className="text-xs text-white/40">
+            {state === 'on'
+              ? 'Activées — le serveur te prévient quand un épisode de tes séries sort (toutes les 6 h), même app fermée.'
+              : 'Sois prévenu quand un épisode de tes séries suivies est disponible.'}
+          </div>
+        </div>
+        {state === 'on' ? (
+          <button
+            onClick={desactiver}
+            className="rounded-sm border border-white/15 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/60 transition-colors hover:text-white"
+          >
+            Désactiver
+          </button>
+        ) : (
+          <button
+            onClick={activer}
+            disabled={state === 'busy'}
+            className="rounded-sm bg-[rgb(var(--acc))] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-opacity hover:opacity-85 disabled:opacity-40"
+          >
+            {state === 'busy' ? 'Activation…' : state === 'error' ? 'Réessayer' : 'Activer'}
+          </button>
+        )}
+      </div>
+      {state === 'error' && (
+        <p className="mt-2 text-xs text-red-400">
+          Échec de l'activation — autorise les notifications pour ce site dans les réglages du navigateur, puis réessaie.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function StatusPage() {
   const [results, setResults] = useState<Record<string, Health>>({})
   const [checkedAt, setCheckedAt] = useState<Date | null>(null)
@@ -159,6 +248,7 @@ export default function StatusPage() {
             torrent lui-même (mort) — change simplement de source.
           </p>
         )}
+        <PushNotifCard />
       </div>
     </div>
   )
