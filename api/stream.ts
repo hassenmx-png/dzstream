@@ -773,7 +773,10 @@ async function handlePlay(c: any) {
     console.log("[play] target:", (data.u ?? "").slice(0, 80), "-> upstream:", upstream.status, upstream.url.slice(0, 80));
     // Page d'erreur en amont (ex. AllDebrid "Serveur non autorisé") : on
     // renvoie un 502 JSON propre pour que le player passe à la source suivante.
-    if (!upstream.ok && (upstream.headers.get("content-type") ?? "").includes("text/html")) {
+    // Une réponse vidéo ne doit JAMAIS être du HTML : page d'erreur TorBox
+    // (« not cached yet »), AllDebrid, etc. → 502 JSON → repli auto sur la
+    // source suivante, quel que soit le statut (même 200).
+    if ((upstream.headers.get("content-type") ?? "").includes("text/html")) {
       return c.json({ error: `flux indisponible en amont (HTTP ${upstream.status})` }, 502);
     }
     const headers = new Headers();
