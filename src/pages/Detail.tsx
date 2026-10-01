@@ -11,7 +11,7 @@ import {
 import { episodeStreamId, makeStreamLabel, useLibrary, useProgress } from '@/lib/library'
 import { setRating, useRatings } from '@/lib/ratings'
 import { fetchMetaFr } from '@/lib/tmdbfr'
-import { fetchExtras, fetchRatings, type AggRatings, type TmdbExtras } from '@/lib/tmdbApi'
+import { fetchExtras, fetchRecs, fetchRatings, type AggRatings, type TmdbExtras } from '@/lib/tmdbApi'
 import { dominantColor, withAlpha } from '@/lib/color'
 import { useNav } from '@/lib/nav'
 import { readJSON, writeJSON } from '@/lib/store'
