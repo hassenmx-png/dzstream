@@ -2,6 +2,18 @@ import type { LibraryItem, WatchProgress } from '@/types'
 import { LIB_KEY, PROGRESS_KEY } from './library'
 import { RATINGS_KEY, type RatingItem } from './ratings'
 import { onWrite, readJSON, writeJSON } from './store'
+import { exportBackup } from './backup'
+import {
+  DATA_PREFIX as PROFILE_DATA_PREFIX,
+  REGISTRY_KEY as PROFILE_REGISTRY_KEY,
+  SHARED_KEYS as PROFILE_SHARED_KEYS,
+  deleteProfileDataRaw,
+  getActiveProfileId,
+  getProfileDataRaw,
+  getProfiles,
+  saveProfileDataRaw,
+  saveProfiles,
+} from './profiles'
 
 /**
  * Synchro multi-appareils sans compte.
@@ -126,6 +138,68 @@ function mergeRatings(local: RatingItem[], remote: RatingItem[], lastPullAt: num
   return mergeById(local, remote, lastPullAt, (r) => r.updatedAt, 500)
 }
 
+// ------------------------------------------------------------------ profils
+
+/** Profil tel que stocke dans le coffre : registre + blob de donnees. */
+export interface SyncProfile {
+  id: string
+  name: string
+  color: string
+  pin: string | null
+  createdAt: number
+  updatedAt: number
+  /** Blob JSON des donnees du profil ('' = jamais sauvegarde / vide). */
+  data: string
+  dataUpdatedAt: number
+}
+
+function profileStamp(p: SyncProfile): number {
+  return Math.max(p.updatedAt ?? p.createdAt, p.dataUpdatedAt ?? 0)
+}
+
+function mergeProfiles(local: SyncProfile[], remote: SyncProfile[], lastPullAt: number): SyncProfile[] {
+  return mergeById(local, remote, lastPullAt, profileStamp, 8)
+}
+
+/**
+ * Serialise les profils locaux pour le coffre. Le profil actif est capture
+ * « en direct » depuis localStorage (son blob n'existe que lorsqu'on bascule
+ * ailleurs) ; les autres depuis leur blob. L'appareil en cours d'usage
+ * emporte le conflit sur le profil actif — on ne regarde que sur un ecran.
+ */
+function collectProfiles(): SyncProfile[] {
+  const activeId = getActiveProfileId()
+  let liveData: Record<string, unknown> | null = null
+  return getProfiles().map((p) => {
+    const updatedAt = p.updatedAt ?? p.createdAt
+    let data: string
+    let dataUpdatedAt: number
+    if (p.id === activeId) {
+      if (liveData === null) {
+        liveData = {}
+        for (const [k, v] of Object.entries(exportBackup().data)) {
+          if (!PROFILE_SHARED_KEYS.has(k)) liveData[k] = v
+        }
+      }
+      data = JSON.stringify(liveData)
+      dataUpdatedAt = Date.now()
+    } else {
+      data = getProfileDataRaw(p.id) ?? ''
+      dataUpdatedAt = updatedAt
+    }
+    return { id: p.id, name: p.name, color: p.color, pin: p.pin, createdAt: p.createdAt, updatedAt, data, dataUpdatedAt }
+  })
+}
+
+/** Ecrit le resultat de la fusion en local (registre + blobs, nettoyage des supprimes). */
+function applyProfiles(merged: SyncProfile[]): void {
+  const before = new Set(getProfiles().map((p) => p.id))
+  const after = new Set(merged.map((p) => p.id))
+  saveProfiles(merged.map(({ data: _d, dataUpdatedAt: _t, ...p }) => p))
+  for (const m of merged) if (m.data) saveProfileDataRaw(m.id, m.data)
+  for (const id of before) if (!after.has(id)) deleteProfileDataRaw(id)
+}
+
 // ------------------------------------------------------------------ réseau
 
 let suppressPush = false
@@ -136,15 +210,15 @@ async function apiGet(code: string) {
   const res = await fetch(`/api/sync/${code}`, { cache: 'no-store' })
   if (res.status === 404) return { found: false as const }
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const j = (await res.json()) as { data: { progress?: WatchProgress[]; library?: LibraryItem[]; ratings?: RatingItem[] } }
-  return { found: true as const, progress: j.data.progress ?? [], library: j.data.library ?? [], ratings: j.data.ratings ?? [] }
+  const j = (await res.json()) as { data: { progress?: WatchProgress[]; library?: LibraryItem[]; ratings?: RatingItem[]; profiles?: SyncProfile[] } }
+  return { found: true as const, progress: j.data.progress ?? [], library: j.data.library ?? [], ratings: j.data.ratings ?? [], profiles: j.data.profiles ?? [] }
 }
 
-async function apiPut(code: string, progress: WatchProgress[], library: LibraryItem[], ratings: RatingItem[]) {
+async function apiPut(code: string, progress: WatchProgress[], library: LibraryItem[], ratings: RatingItem[], profiles: SyncProfile[]) {
   const res = await fetch(`/api/sync/${code}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ progress, library, ratings }),
+    body: JSON.stringify({ progress, library, ratings, profiles }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
@@ -161,11 +235,13 @@ export async function syncNow(): Promise<boolean> {
       const localProgress = readJSON<WatchProgress[]>(PROGRESS_KEY, [])
       const localLibrary = readJSON<LibraryItem[]>(LIB_KEY, [])
       const localRatings = readJSON<RatingItem[]>(RATINGS_KEY, [])
+      const localProfiles = collectProfiles()
 
       const remote = await apiGet(code)
       const mergedProgress = remote.found ? mergeProgress(localProgress, remote.progress, meta.lastPullAt) : localProgress
       const mergedLibrary = remote.found ? mergeLibrary(localLibrary, remote.library, meta.lastPullAt) : localLibrary
       const mergedRatings = remote.found ? mergeRatings(localRatings, remote.ratings, meta.lastPullAt) : localRatings
+      const mergedProfiles = remote.found ? mergeProfiles(localProfiles, remote.profiles, meta.lastPullAt) : localProfiles
 
       // Applique la fusion localement sans redéclencher un push en écho
       suppressPush = true
@@ -173,11 +249,12 @@ export async function syncNow(): Promise<boolean> {
         writeJSON(PROGRESS_KEY, mergedProgress)
         writeJSON(LIB_KEY, mergedLibrary)
         writeJSON(RATINGS_KEY, mergedRatings)
+        applyProfiles(mergedProfiles)
       } finally {
         suppressPush = false
       }
 
-      await apiPut(code, mergedProgress, mergedLibrary, mergedRatings)
+      await apiPut(code, mergedProgress, mergedLibrary, mergedRatings, mergedProfiles)
       const now = Date.now()
       setMeta({ lastPullAt: now, lastSyncAt: now, lastError: null })
       return true
@@ -276,10 +353,12 @@ export function initSync() {
   if (wired) return
   wired = true
 
-  // Push débouncé après chaque écriture locale sur la liste ou la progression
+  // Push débouncé après chaque écriture locale sur la liste, la progression
+  // ou les profils (création, suppression, PIN, bascule)
   onWrite((key) => {
     if (suppressPush || !getSyncCode()) return
-    if (key !== LIB_KEY && key !== PROGRESS_KEY && key !== RATINGS_KEY) return
+    if (key !== LIB_KEY && key !== PROGRESS_KEY && key !== RATINGS_KEY
+      && key !== PROFILE_REGISTRY_KEY && !key.startsWith(PROFILE_DATA_PREFIX)) return
     if (pushTimer) clearTimeout(pushTimer)
     pushTimer = setTimeout(() => {
       pushTimer = null

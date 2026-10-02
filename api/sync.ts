@@ -17,10 +17,11 @@ interface SyncPayload {
   progress?: unknown[];
   library?: unknown[];
   ratings?: unknown[];
+  profiles?: unknown[];
 }
 
 const CODE_RE = /^NS-[A-Z2-9]{4}-[A-Z2-9]{4}$/;
-const MAX_BODY = 256 * 1024; // 256 ko, très au-delà d'un usage réel
+const MAX_BODY = 1024 * 1024; // 1 Mo : la synchro embarque désormais les données de profils
 
 // ---------------------------------------------------------------- stockage
 
@@ -340,6 +341,13 @@ syncApp.put("/:code", async (c) => {
     progress: Array.isArray(payload.progress) ? payload.progress.slice(0, 200) : [],
     library: Array.isArray(payload.library) ? payload.library.slice(0, 500) : [],
     ratings: Array.isArray(payload.ratings) ? payload.ratings.slice(0, 500) : [],
+    // Profils : max 10, blob de donnees capé à 800 ko par profil
+    profiles: Array.isArray(payload.profiles)
+      ? payload.profiles.slice(0, 10).map((x) => {
+          const prof = (typeof x === "object" && x !== null ? x : {}) as Record<string, unknown>;
+          return { ...prof, data: typeof prof.data === "string" ? prof.data.slice(0, 800_000) : "" };
+        })
+      : [],
   };
   const row: Row = { data: JSON.stringify(clean), updatedAt: Date.now() };
   let mode: "db" | "memory" = "db";

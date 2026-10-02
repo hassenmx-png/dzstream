@@ -16,15 +16,17 @@ export interface Profile {
   color: string
   pin: string | null
   createdAt: number
+  /** Derniere modification (PIN, sauvegarde des donnees) — sert a la synchro. */
+  updatedAt?: number
 }
 
-const REGISTRY_KEY = 'novastream:profiles'
+export const REGISTRY_KEY = 'novastream:profiles'
 const ACTIVE_KEY = 'novastream:active-profile'
-const DATA_PREFIX = 'novastream:profile-data:'
+export const DATA_PREFIX = 'novastream:profile-data:'
 const UNLOCK_KEY = 'novastream:profile-unlocked'
 
 /** Clés partagées entre profils (registre, profil actif, clés debrid, sous-titres). */
-const SHARED_KEYS = new Set([
+export const SHARED_KEYS = new Set([
   REGISTRY_KEY,
   ACTIVE_KEY,
   'novastream:debrids',
@@ -41,7 +43,7 @@ export function getProfiles(): Profile[] {
   } catch { return [] }
 }
 
-function saveProfiles(p: Profile[]): void {
+export function saveProfiles(p: Profile[]): void {
   try { localStorage.setItem(REGISTRY_KEY, JSON.stringify(p)) } catch { /* quota */ }
 }
 
@@ -64,6 +66,7 @@ export function createProfile(name: string, pin: string | null): Profile {
     color: PROFILE_COLORS[profiles.length % PROFILE_COLORS.length],
     pin: pin && /^\d{4}$/.test(pin) ? pin : null,
     createdAt: Date.now(),
+    updatedAt: Date.now(),
   }
   saveProfiles([...profiles, p])
   if (profiles.length === 0) {
@@ -84,7 +87,7 @@ export function deleteProfile(id: string): void {
 }
 
 export function setProfilePin(id: string, pin: string | null): void {
-  saveProfiles(getProfiles().map((p) => (p.id === id ? { ...p, pin: pin && /^\d{4}$/.test(pin) ? pin : null } : p)))
+  saveProfiles(getProfiles().map((p) => (p.id === id ? { ...p, pin: pin && /^\d{4}$/.test(pin) ? pin : null, updatedAt: Date.now() } : p)))
 }
 
 function loadProfileData(id: string): Record<string, unknown> {
@@ -95,6 +98,20 @@ function loadProfileData(id: string): Record<string, unknown> {
 
 function saveProfileData(id: string, data: Record<string, unknown>): void {
   try { localStorage.setItem(DATA_PREFIX + id, JSON.stringify(data)) } catch { /* quota */ }
+  try { saveProfiles(getProfiles().map((p) => (p.id === id ? { ...p, updatedAt: Date.now() } : p))) } catch { /* */ }
+}
+
+/** Blob brut des donnees d'un profil (synchro serveur). */
+export function getProfileDataRaw(id: string): string | null {
+  try { return localStorage.getItem(DATA_PREFIX + id) } catch { return null }
+}
+
+export function saveProfileDataRaw(id: string, raw: string): void {
+  try { localStorage.setItem(DATA_PREFIX + id, raw) } catch { /* quota */ }
+}
+
+export function deleteProfileDataRaw(id: string): void {
+  try { localStorage.removeItem(DATA_PREFIX + id) } catch { /* */ }
 }
 
 function clearAppData(): void {
