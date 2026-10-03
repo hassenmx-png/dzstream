@@ -663,7 +663,10 @@ export const SAFE_AUDIO_RE = /\b(aac|mp3|opus|vorbis|pcm|lcpm|flac)\b/i
 
 /** Texte complet d'une source pour la détection (nom + titre + description). */
 export function streamText(s: Stream): string {
-  return `${s.name ?? ''} ${s.title ?? ''} ${s.description ?? ''}`
+  // Le nom de fichier (behaviorHints) porte souvent le codec audio
+  // (ex. Torrentio : « Movie.2026.1080p.AMZN.WEB-DL.EAC3... ») — indispensable
+  // pour détecter l'AC3/EAC3 que ni le nom ni la description ne mentionnent.
+  return `${s.name ?? ''} ${s.title ?? ''} ${s.description ?? ''} ${s.behaviorHints?.filename ?? ''}`
 }
 
 /** Vrai si la source déclare une piste audio incompatible navigateur. */

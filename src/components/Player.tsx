@@ -720,7 +720,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
               // pour connaître le codec AVANT de lancer. Si le titre déclare
               // déjà un codec (sûr ou risqué — regex partagée, toutes
               // variantes : DD 5.1, DDP 5.1, DD+…), la sonde est inutile.
-              const titleProbe = `${req.stream.name ?? ''} ${req.stream.title ?? ''} ${req.stream.description ?? ''}`
+              const titleProbe = `${req.stream.name ?? ''} ${req.stream.title ?? ''} ${req.stream.description ?? ''} ${req.stream.behaviorHints?.filename ?? ''}`
               const declaredSafe = SAFE_AUDIO_RE.test(titleProbe)
               const declaredRisky = !req.stream.audioFix && RISKY_AUDIO_RE.test(titleProbe)
               let risky = declaredRisky
