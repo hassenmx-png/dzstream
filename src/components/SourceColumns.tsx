@@ -128,7 +128,11 @@ function StreamButton({ s, recommended, onLaunch }: { s: Stream; recommended: bo
         className="self-center shrink-0 opacity-40 hover:opacity-100 transition-opacity cursor-pointer text-white/70 hover:text-white"
         onClick={(e) => {
           e.stopPropagation()
-          const link = s.url || s.externalUrl || (s.infoHash ? `magnet:?xt=urn:btih:${s.infoHash}` : '')
+          let link = s.url || s.externalUrl || (s.infoHash ? `magnet:?xt=urn:btih:${s.infoHash}` : '')
+          // Lien absolu pour les lecteurs externes (VLC/Stremio) : préfixe
+          // l'origine. Le token de lecture /play est l'autorisation (valide 6 h),
+          // aucun cookie ni code n'est nécessaire.
+          if (link.startsWith('/')) link = `https://dzstream.duckdns.org${link}`
           if (link) navigator.clipboard?.writeText(link).catch(() => {})
         }}
       >

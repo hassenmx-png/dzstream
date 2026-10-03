@@ -108,14 +108,18 @@ app.use("/api/*", async (c, next) => {
     if (!rateLimit(ip)) return c.json({ error: "Trop de requêtes" }, 429);
   }
 
-  // Jeton (cookie HttpOnly) — désactivé si ACCESS_CODE vide
+  // Jeton (cookie HttpOnly) — désactivé si ACCESS_CODE vide.
+  // Les liens copiés pour lecteurs externes (VLC, Stremio) n'ont pas de
+  // cookie : on accepte le code d'accès en paramètre ?code= en alternative.
   if (ACCESS_CODE && getCookie(c, AUTH_COOKIE) !== ACCESS_CODE) {
-    const accept = c.req.header("accept") ?? "";
-    if (accept.includes("text/html") && c.req.method === "GET") {
-      const login = await import("node:fs/promises").then((m) => m.readFile("/root/work_v43/api/login.html", "utf8"));
-      return c.html(login);
+    if (c.req.query("code") !== ACCESS_CODE) {
+      const accept = c.req.header("accept") ?? "";
+      if (accept.includes("text/html") && c.req.method === "GET") {
+        const login = await import("node:fs/promises").then((m) => m.readFile("/root/work_v43/api/login.html", "utf8"));
+        return c.html(login);
+      }
+      return c.json({ error: "Code d'accès requis" }, 401);
     }
-    return c.json({ error: "Code d'accès requis" }, 401);
   }
   await next();
 });
