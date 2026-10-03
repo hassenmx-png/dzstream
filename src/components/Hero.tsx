@@ -60,6 +60,32 @@ export default function Hero({ items }: { items: MetaPreview[] }) {
     return () => { cancelled = true; clearTimeout(t) }
   }, [m?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Parallaxe cinématique : le fond glisse plus lentement que le scroll
+  // (profondeur façon plateformes VOD). IO + rAF, pixels entiers, GPU.
+  const parallaxRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = parallaxRef.current
+    if (!el) return
+    let raf = 0
+    let visible = true
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting }, { rootMargin: '25% 0px' })
+    io.observe(el)
+    const apply = () => {
+      raf = 0
+      el.style.transform = `translate3d(0, ${Math.round(window.scrollY * 0.28)}px, 0)`
+    }
+    const onScroll = () => {
+      if (raf || !visible) return
+      raf = requestAnimationFrame(apply)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      io.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+
   if (!m) return <div className="h-[70vh]" />
 
   return (
@@ -67,6 +93,7 @@ export default function Hero({ items }: { items: MetaPreview[] }) {
       {/* Fond : toutes les slides empilées + fondu croisé RÉEL.
           L'ancienne slide reste montée pendant que la nouvelle apparaît
           (plus de trou/noir derrière pendant le chargement). */}
+      <div ref={parallaxRef} className="absolute inset-0">
       {featured.map((f, i) => (
         <div
           key={f.id}
@@ -100,6 +127,7 @@ export default function Hero({ items }: { items: MetaPreview[] }) {
           />
         </div>
       )}
+      </div>
       <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/40 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-64 fade-bottom" />
 
