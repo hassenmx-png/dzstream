@@ -697,8 +697,8 @@ const _crypto = _require("node:crypto") as typeof import("node:crypto");
 const ENC_KEY = _crypto.createHash("sha256").update(`${STREAMING_SECRET}:enc`).digest();
 
 /** Chiffre le payload (AES-256-GCM) : confidentiel ET inviolable. */
-function encodeToken(u: string): string {
-  const payload = Buffer.from(JSON.stringify({ u, e: Date.now() + 6 * 3600 * 1000 }));
+function encodeToken(u: string, t?: number): string {
+  const payload = Buffer.from(JSON.stringify({ u, e: Date.now() + 6 * 3600 * 1000, ...(t ? { t } : {}) }));
   const iv = _crypto.randomBytes(12);
   const cipher = _crypto.createCipheriv("aes-256-gcm", ENC_KEY, iv);
   const enc = Buffer.concat([cipher.update(payload), cipher.final()]);
@@ -713,20 +713,21 @@ function decodeToken(token: string): { u?: string; e?: number } | null {
     const decipher = _crypto.createDecipheriv("aes-256-gcm", ENC_KEY, raw.subarray(0, 12));
     decipher.setAuthTag(raw.subarray(12, 28));
     const dec = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]);
-    return JSON.parse(dec.toString()) as { u?: string; e?: number };
+    return JSON.parse(dec.toString()) as { u?: string; e?: number; t?: number };
   } catch {
     return null;
   }
 }
 
 app.post("/wrap", async (c) => {
-  let body: { urls?: unknown } = {};
+  let body: { urls?: unknown; flags?: unknown } = {};
   try { body = await c.req.json(); } catch {}
   const urls = Array.isArray(body.urls)
     ? body.urls.filter((u): u is string => typeof u === "string" && /^https?:\/\//.test(u) && u.length < 4096)
     : [];
+  const flags = Array.isArray(body.flags) ? body.flags : [];
   const code = c.req.query("code") || "";
-  const plays = urls.map((u) => `/api/stream/play/${encodeToken(u)}` + (code ? `?code=${encodeURIComponent(code)}` : ""));
+  const plays = urls.map((u, i) => `/api/stream/play/${encodeToken(u, flags[i] === 1 ? 1 : 0)}` + (code ? `?code=${encodeURIComponent(code)}` : ""));
   return c.json({ plays });
 });
 
@@ -756,6 +757,14 @@ async function handlePlay(c: any) {
   // l'URL est celle de l'utilisateur, déjà visible dans son propre navigateur.
   if (/^https:\/\/torrentio\.strem\.fun\//.test(target)) {
     return c.redirect(target, 302);
+  }
+
+  // Audio Fix : piste AC3/DTS non décodée par le navigateur -> transcodage
+  // audio AAC à la volée via mediaflow (vidéo H.264 copiée, seek préservé
+  // par index de cues). Le drapeau t est posé par /wrap côté client.
+  if (data.t) {
+    const d = encodeURIComponent(target);
+    return c.redirect(`https://dzstream.duckdns.org/mf/proxy/stream?d=${d}&transcode=true`, 302);
   }
 
   // Passthrough : on stream tel quel en préservant les en-têtes de plage

@@ -6,7 +6,7 @@ import {
 import type { Episode, MediaType, MetaFull, MetaPreview, Stream, SubtitleTrack } from '@/types'
 import { fetchCatalog, GENRE_FR } from '@/lib/cinemeta'
 import {
-  fetchAllStreams, fetchAllSubtitles, fetchMetaAny, formatBytes, getDebrid, isDebridDown, isDebridStream, streamAudio, streamKind, streamQuality, streamSeeders, streamSize, watchabilityScore, getAddons, cachedStreams, cacheStreams,
+  fetchAllStreams, fetchAllSubtitles, fetchMetaAny, formatBytes, getDebrid, hasRiskyAudio, isDebridDown, isDebridStream, streamAudio, streamKind, streamQuality, streamSeeders, streamSize, watchabilityScore, getAddons, cachedStreams, cacheStreams,
 } from '@/lib/addons'
 import { episodeStreamId, makeStreamLabel, useLibrary, useProgress } from '@/lib/library'
 import { setRating, useRatings } from '@/lib/ratings'
@@ -441,7 +441,16 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
     try {
       const httpOnly = all.filter((s) => (s.url ?? '').startsWith('http'))
       if (httpOnly.length) {
-        const wr = await fetch('/api/stream/wrap?code=' + encodeURIComponent(localStorage.getItem('accessCode') || ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urls: httpOnly.map((s) => s.url) }) })
+        const wr = await fetch('/api/stream/wrap?code=' + encodeURIComponent(localStorage.getItem('accessCode') || ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+            urls: httpOnly.map((s) => s.url),
+            // Audio Fix : pistes AC3/DTS sur conteneurs H.264 -> transcode via mediaflow.
+            // HEVC (265) exclu : le réencodage vidéo serait trop lourd pour le VPS.
+            flags: httpOnly.map((s) => {
+              const probe = `${(s as { name?: string }).name ?? ''} ${(s as { title?: string }).title ?? ''} ${(s as { description?: string }).description ?? ''}`
+              const hevc = /\b(265|hevc|x265|h265)\b/i.test(probe)
+              return hasRiskyAudio(s as Parameters<typeof hasRiskyAudio>[0]) && !hevc ? 1 : 0
+            }),
+          }) })
         if (wr.ok) {
           const { plays } = await wr.json()
           httpOnly.forEach((s, i) => { if (plays?.[i]) s.url = plays[i] })
