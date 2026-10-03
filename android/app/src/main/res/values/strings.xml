@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DZ Stream</string>
+    <string name="title_activity_main">DZ Stream</string>
+    <string name="package_name">org.dzstream.app</string>
+    <string name="custom_url_scheme">org.dzstream.app</string>
+</resources>
