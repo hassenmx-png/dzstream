@@ -764,7 +764,9 @@ async function handlePlay(c: any) {
   // par index de cues). Le drapeau t est posé par /wrap côté client.
   if (data.t) {
     const d = encodeURIComponent(target);
-    return c.redirect(`https://dzstream.duckdns.org/mf/proxy/stream?d=${d}&transcode=true`, 302);
+    const pw = process.env.MEDIAFLOW_API_PASSWORD || "";
+    const auth = pw ? `&api_password=${encodeURIComponent(pw)}` : "";
+    return c.redirect(`https://dzstream.duckdns.org/mf/proxy/stream?d=${d}&transcode=true${auth}`, 302);
   }
 
   // Passthrough : on stream tel quel en préservant les en-têtes de plage
