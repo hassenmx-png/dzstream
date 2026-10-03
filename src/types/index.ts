@@ -66,6 +66,8 @@ export interface Stream {
   fileIdx?: number
   sources?: string[]
   externalUrl?: string
+  /** Audio Fix : la source est routée vers le transcodage (audio AAC) — le player ne doit pas la sauter. */
+  audioFix?: boolean
   subtitles?: { id: string; url: string; lang: string }[]
   behaviorHints?: {
     notWebReady?: boolean

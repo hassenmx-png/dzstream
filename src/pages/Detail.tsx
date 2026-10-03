@@ -448,7 +448,9 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
             flags: httpOnly.map((s) => {
               const probe = `${(s as { name?: string }).name ?? ''} ${(s as { title?: string }).title ?? ''} ${(s as { description?: string }).description ?? ''}`
               const hevc = /\b(265|hevc|x265|h265)\b/i.test(probe)
-              return hasRiskyAudio(s as Parameters<typeof hasRiskyAudio>[0]) && !hevc ? 1 : 0
+              const fix = hasRiskyAudio(s as Parameters<typeof hasRiskyAudio>[0]) && !hevc ? 1 : 0
+              if (fix === 1) (s as { audioFix?: boolean }).audioFix = true
+              return fix
             }),
           }) })
         if (wr.ok) {

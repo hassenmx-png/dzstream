@@ -722,7 +722,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
               // variantes : DD 5.1, DDP 5.1, DD+…), la sonde est inutile.
               const titleProbe = `${req.stream.name ?? ''} ${req.stream.title ?? ''} ${req.stream.description ?? ''}`
               const declaredSafe = SAFE_AUDIO_RE.test(titleProbe)
-              const declaredRisky = RISKY_AUDIO_RE.test(titleProbe)
+              const declaredRisky = !req.stream.audioFix && RISKY_AUDIO_RE.test(titleProbe)
               let risky = declaredRisky
               if (finalUrl && !declaredSafe && !declaredRisky) {
                 try {
@@ -1430,8 +1430,13 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
         // HEVC/x265 : le transcodage ne ré-encode QUE l'audio — la vidéo
         // resterait illisible dans Chrome. Inutile de continuer.
         if (/hevc|h265/.test(j.videoCodec ?? '')) {
-          setError('Cette source combine vidéo HEVC et audio AC3/DTS — illisible dans ce navigateur. Choisis une autre source (x264 de préférence).')
-          return
+          // Le transcodage ne touche QUE l'audio : la vidéo HEVC est copiée.
+          // Sur un appareil qui décode le HEVC (téléphones récents), ça passe.
+          const hevcPlayable = /android|iphone|ipad/i.test(navigator.userAgent)
+          if (!hevcPlayable) {
+            setError('Cette source combine vidéo HEVC et audio AC3/DTS — illisible dans ce navigateur. Choisis une autre source (x264 de préférence).')
+            return
+          }
         }
       } catch { /* sonde impossible : on tente quand même */ }
     }
