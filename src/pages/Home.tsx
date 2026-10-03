@@ -14,7 +14,7 @@ import PosterCard from '@/components/PosterCard'
 import type { InstalledAddon } from '@/types'
 
 /** Révèle la section quand elle entre dans le viewport (fade + montée). */
-function Reveal({ children }: { children: ReactNode }) {
+function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
   useEffect(() => {
@@ -32,7 +32,11 @@ function Reveal({ children }: { children: ReactNode }) {
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
-  return <div ref={ref} className={`reveal ${visible ? 'is-visible' : ''}`}>{children}</div>
+  return (
+    <div ref={ref} className={`reveal ${visible ? 'is-visible' : ''}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+      {children}
+    </div>
+  )
 }
 
 /** Rangée fantôme affichée pendant le chargement des catalogues. */
@@ -567,7 +571,7 @@ export default function Home() {
         )}
         <ContinueRow />
         {layout.map((row, i) => (
-          <Reveal key={row.id}>
+          <Reveal key={row.id} delay={(i % 4) * 70}>
             <RowShell
               editing={editing}
               title={row.title}
