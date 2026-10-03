@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react'
-import { Play, Users } from 'lucide-react'
+import { Link2, Play, Users } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Stream } from '@/types'
 import {
@@ -122,6 +122,18 @@ function StreamButton({ s, recommended, onLaunch }: { s: Stream; recommended: bo
         </p>
       </div>
       <QualityTag q={streamQuality(s)} />
+      <span
+        role="button"
+        title="Copier le lien — lecteur externe (VLC, Stremio...)"
+        className="self-center shrink-0 opacity-40 hover:opacity-100 transition-opacity cursor-pointer text-white/70 hover:text-white"
+        onClick={(e) => {
+          e.stopPropagation()
+          const link = s.url || s.externalUrl || (s.infoHash ? `magnet:?xt=urn:btih:${s.infoHash}` : '')
+          if (link) navigator.clipboard?.writeText(link).catch(() => {})
+        }}
+      >
+        <Link2 size={14} />
+      </span>
     </button>
   )
 }
