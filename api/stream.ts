@@ -645,7 +645,7 @@ app.get("/transcode", async (c) => {
       : ["-c:v", "copy"]),
     "-c:a", "aac", "-b:a", "160k", "-ac", "2", // audio universel
     "-sn", "-dn",             // sous-titres/données embarqués ignorés (OpenSubtitles gère)
-    "-f", "matroska",
+    "-f", "mp4", "-movflags", "frag_keyframe+empty_moov", // fMP4 : universel, démarrage immédiat
     "-flush_packets", "1",    // démarrage quasi immédiat
     "-max_muxing_queue_size", "1024",
     "pipe:1",
@@ -663,7 +663,7 @@ app.get("/transcode", async (c) => {
     status: 200,
     headers: {
       ...corsHeaders(),
-      "Content-Type": "video/x-matroska",
+      "Content-Type": "video/mp4",
       "Cache-Control": "no-store",
     },
   });
