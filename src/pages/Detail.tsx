@@ -214,6 +214,33 @@ type SourceFilter = 'all' | 'torrent' | 'http'
 
 export default function DetailPage({ id, type }: { id: string; type: MediaType }) {
   const { go, play, back } = useNav()
+  // Parallaxe cinématique : le backdrop glisse plus lentement que le scroll
+  // (effet de profondeur façon plateformes VOD). rAF-brodé, passif, sans état.
+  const parallaxRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = parallaxRef.current
+    if (!el) return
+    let raf = 0
+    let visible = true
+    // Zéro calcul quand le hero est hors écran (scroll profond dans la fiche)
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting }, { rootMargin: '25% 0px' })
+    io.observe(el)
+    const apply = () => {
+      raf = 0
+      // translate3d : couche GPU dédiée ; pixels entiers : pas de re-raster sous-pixel
+      el.style.transform = `translate3d(0, ${Math.round(window.scrollY * 0.28)}px, 0)`
+    }
+    const onScroll = () => {
+      if (raf || !visible) return
+      raf = requestAnimationFrame(apply)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      io.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
   // Préchauffe le chunk du lecteur (lazy) pendant que l'utilisateur lit la
   // fiche : au clic sur une source, tout est déjà là → lecture instantanée
   // et plein écran auto mobile toujours dans la fenêtre du geste tactile.
@@ -606,7 +633,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
     // d'attendre devant un spinner — l'app paraît instantanée.
     return (
       <div className="min-h-screen pb-24">
-        <div className="skeleton h-[62vh] min-h-[420px] w-full" />
+        <div className="skeleton h-[78vh] min-h-[520px] w-full" />
         <div className="px-5 md:px-12 -mt-40 relative space-y-4">
           <div className="flex items-end gap-8">
             <div className="skeleton hidden md:block w-44 aspect-[2/3] rounded-md" />
@@ -712,9 +739,11 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
   return (
     <div className="min-h-screen pb-24">
       {/* Backdrop avec pan cinématique + halo ambiant de la couleur dominante */}
-      <div className="relative h-[62vh] min-h-[420px] w-full overflow-hidden">
+      <div className="relative h-[78vh] min-h-[520px] w-full overflow-hidden">
         {meta.background && (
-          <img src={meta.background} alt="" className="h-full w-full object-cover kenburns" />
+          <div ref={parallaxRef} className="absolute inset-0">
+            <img src={meta.background} alt="" fetchPriority="high" decoding="async" className="h-full w-full scale-[1.15] object-cover kenburns" />
+          </div>
         )}
         {glow && (
           <div
@@ -734,9 +763,10 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
           <ArrowLeft size={16} /> RETOUR
         </button>
 
-        <div className="absolute bottom-8 left-5 md:left-12 right-5 md:right-12 flex items-end gap-8">
+        <div className="absolute bottom-10 left-5 md:left-12 right-5 md:right-12 flex items-end gap-8 view-enter">
           {meta.poster && (
             <img
+              decoding="async"
               src={meta.poster}
               alt={meta.name}
               data-flight-target
@@ -744,13 +774,15 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="bracket-label mb-3">{type === 'movie' ? 'Film' : type === 'series' ? 'Série' : 'Anime'}</p>
-            {meta.logo ? (
-              <img src={meta.logo} alt={meta.name} className="max-h-24 md:max-h-32 max-w-full object-contain object-left" />
-            ) : (
-              <h1 className="font-display text-4xl md:text-7xl font-black tracking-tight leading-[0.95] drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">{meta.name}</h1>
-            )}
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/70">
+            <p className="bracket-label mb-3 rise-in" style={{ animationDelay: '80ms' }}>{type === 'movie' ? 'Film' : type === 'series' ? 'Série' : 'Anime'}</p>
+            <div className="rise-in" style={{ animationDelay: '160ms' }}>
+              {meta.logo ? (
+                <img src={meta.logo} alt={meta.name} decoding="async" className="max-h-24 md:max-h-32 max-w-full object-contain object-left" />
+              ) : (
+                <h1 className="font-display text-4xl md:text-7xl font-black tracking-tight leading-[0.95] drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">{meta.name}</h1>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/70 rise-in" style={{ animationDelay: '240ms' }}>
               {meta.imdbRating && (
                 <span className="flex items-center gap-1 font-semibold text-[rgb(var(--acc))]">
                   <Star size={14} fill="currentColor" /> {meta.imdbRating}
@@ -767,11 +799,11 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                 </span>
               ))}
             </div>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3 rise-in" style={{ animationDelay: '320ms' }}>
               {existing && existing.stream ? (
                 <button
                   onClick={() => launch(existing.stream!, existing.time)}
-                  className="btn-aurora flex items-center gap-2 rounded-sm px-7 py-3 text-sm font-bold text-white hover:scale-105 transition-transform"
+                  className="btn-aurora flex items-center gap-2 rounded-sm px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_44px_-10px_rgba(var(--acc),0.65)] hover:scale-105 transition-transform"
                 >
                   <Play size={17} fill="currentColor" /> Reprendre ({Math.round((existing.time / (existing.duration || 1)) * 100)}%)
                 </button>
@@ -779,7 +811,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                 <button
                   onClick={() => void watchBest()}
                   disabled={streamsLoading}
-                  className="btn-aurora flex items-center gap-2 rounded-sm px-7 py-3 text-sm font-bold text-white hover:scale-105 transition-transform disabled:opacity-60"
+                  className="btn-aurora flex items-center gap-2 rounded-sm px-8 py-3.5 text-sm font-bold text-white shadow-[0_10px_44px_-10px_rgba(var(--acc),0.65)] hover:scale-105 transition-transform disabled:opacity-60"
                 >
                   {streamsLoading
                     ? <RefreshCw size={16} className="animate-spin" />
@@ -817,7 +849,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
               )}
             </div>
             {/* Note personnelle ★1-5 (synchronisée avec le coffre) */}
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3 rise-in" style={{ animationDelay: '400ms' }}>
               <span className="text-[10px] font-mono-label uppercase tracking-widest text-white/35">Ta note</span>
               <div className="flex gap-0.5" onMouseLeave={() => setHoverStar(0)}>
                 {[1, 2, 3, 4, 5].map((n) => {
