@@ -10,7 +10,7 @@ import { traktMarkWatched } from '@/lib/trakt'
 import { simklMarkWatched } from '@/lib/simkl'
 import { opensubsDownloadVtt } from '@/lib/opensubs'
 import { useNav } from '@/lib/nav'
-import { streamKind, formatBytes, isDebridStream, isDebridDown, setDebridDown, streamAudio, RISKY_AUDIO_RE, SAFE_AUDIO_RE } from '@/lib/addons'
+import { streamKind, formatBytes, isDebridStream, isDebridDown, setDebridDown, streamAudio, streamText, RISKY_AUDIO_RE, SAFE_AUDIO_RE } from '@/lib/addons'
 import { useProgress } from '@/lib/library'
 import { readJSON, writeJSON } from '@/lib/store'
 import { getSubPrefs, initSubPrefs, setSubPrefs, shiftVtt, type SubPrefs } from '@/lib/subprefs'
@@ -733,13 +733,25 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
               }
               if (cancelled) return
               if (risky) {
-                if (tryNextSource()) {
-                  toast('Piste audio incompatible (AC3/DTS) → essai de la source suivante…')
+                // Alternative SÛRE (audio décodable) ? On y saute DIRECTEMENT.
+                // Sinon, inutile de parcourir des sources risquées une par une
+                // (Torrentio en liste des dizaines) : transcodage immédiat.
+                const triedKeys = req.triedHashes ?? []
+                const debridDownNow = isDebridDown()
+                const nextSafe = (req.fallbackStreams ?? []).find((x) => {
+                  const k = x.infoHash ?? x.url
+                  if (!k || triedKeys.includes(k)) return false
+                  if (debridDownNow && isDebridStream(x)) return false
+                  if ((x as { audioFix?: boolean }).audioFix) return true
+                  return !RISKY_AUDIO_RE.test(streamText(x).toUpperCase())
+                })
+                if (nextSafe) {
+                  toast('Piste audio incompatible (AC3/DTS) → source compatible trouvée')
+                  tryNextSource()
                   return
                 }
-                // AUCUNE alternative : au lieu de jouer la vidéo EN SILENCE,
-                // on bascule sur le transcodage serveur (vidéo copiée bit à
-                // bit, seul l'audio est ré-encodé en AAC) — son garanti.
+                // AUCUNE alternative sûre : transcodage immédiat de la meilleure
+                // source courante (vidéo copiée bit à bit, audio ré-encodé AAC).
                 toast('🎧 Piste AC3/DTS incompatible → conversion audio en direct…')
                 tcFinalUrlRef.current = finalUrl
                 tcDurationRef.current = 0
