@@ -6,6 +6,54 @@ import { fetchFrenchChannels, fetchTvVooChannels, type TvChannel } from '@/lib/i
 interface EpgEntry { now: string; stop: number; next?: string }
 type EpgMap = Record<string, EpgEntry>
 
+// Registre curé des vraies chaînes FR : logos officiels, numéros TNT, catégories.
+import tvRegistry from '@/lib/tv-registry.json'
+
+type TvReg = { name: string; aliases: string[]; cat: string; num?: number; logo?: string; desc?: string }
+const TVREG = tvRegistry as TvReg[]
+
+const normCh = (s: string): string =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/\b(hd|sd|fhd|4k|uhd|8k|1080p|720p|hevc)\b/g, ' ')
+    .replace(/[^a-z0-9+]+/g, ' ').trim()
+
+const REGMAP = new Map<string, TvReg>()
+for (const r of TVREG) {
+  REGMAP.set(normCh(r.name), r)
+  for (const a of r.aliases) if (!REGMAP.has(normCh(a))) REGMAP.set(normCh(a), r)
+}
+
+const GROUP_MAP: Record<string, string> = {
+  music: 'Musique', sports: 'Sport', sport: 'Sport', news: 'Info', kids: 'Jeunesse',
+  animation: 'Jeunesse', movies: 'Cinéma & Séries', series: 'Cinéma & Séries',
+  entertainment: 'Généraliste', general: 'Généraliste', documentary: 'Documentaires',
+  science: 'Documentaires', travel: 'Documentaires', family: 'Jeunesse', lifestyle: 'Généraliste',
+}
+
+const CAT_ORDER = ['TNT', 'Sport', 'Cinéma & Séries', 'Jeunesse', 'Musique', 'Info', 'Documentaires', 'Généraliste', 'Monde', 'Autres']
+
+function guessCat(name: string): string {
+  const n = normCh(name)
+  if (/\b(sport|bein|eurosport|dazn|equipe|golf|rugby|football|auto|moto|multisports?)\b/.test(n)) return 'Sport'
+  if (/\b(cinema|cine|film|serie|series|ocs|paramount)\b/.test(n)) return 'Cinéma & Séries'
+  if (/\b(kids|jeunesse|gulli|disney|cartoon|nick|boomerang|tiji|dessin|anime|manga|duck|baby|tiVi5)\b/.test(n)) return 'Jeunesse'
+  if (/\b(music|musique|hits|trace|mcm|clubbing|mtv|rfm|mezzo|classica)\b/.test(n)) return 'Musique'
+  if (/\b(news|info|bfm|cnews|lci|franceinfo|euronews|france 24|i ?24|cnn)\b/.test(n)) return 'Info'
+  if (/\b(documentaire|discovery|nat geo|national geographic|voyage|histoire|animaux|science)\b/.test(n)) return 'Documentaires'
+  if (/\b(international|monde|tv5|arabe|turc|portugal|africa|asia)\b/.test(n)) return 'Monde'
+  return 'Généraliste'
+}
+
+export type EnrichedChannel = TvChannel & { cat: string; num?: number }
+
+function enrich(c: TvChannel): EnrichedChannel {
+  const key = normCh(c.name)
+  const r = REGMAP.get(key)
+    ?? [...REGMAP.entries()].find(([k]) => key.startsWith(k + ' ') || k.startsWith(key + ' '))?.[1]
+  const cat = r?.cat ?? GROUP_MAP[(c.group || '').toLowerCase()] ?? guessCat(c.name)
+  return { ...c, cat, num: r?.num, logo: r?.logo || c.logo || undefined }
+}
+
 export default function TVPage() {
   const [channels, setChannels] = useState<TvChannel[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,21 +144,30 @@ export default function TVPage() {
   const epgOf = (ch: TvChannel): EpgEntry | undefined =>
     ch.tvgId ? epg?.[ch.tvgId.split('@')[0]] : undefined
 
+  const enriched = useMemo(() => channels.map(enrich), [channels])
+
   const groups = useMemo(() => {
     const g = new Map<string, number>()
-    for (const c of channels) {
-      const k = c.group || 'Autres'
-      g.set(k, (g.get(k) ?? 0) + 1)
-    }
-    return [...g.entries()].sort((a, b) => b[1] - a[1])
-  }, [channels])
+    for (const c of enriched) g.set(c.cat, (g.get(c.cat) ?? 0) + 1)
+    return [...g.entries()].sort((a, b) => {
+      const ia = CAT_ORDER.indexOf(a[0]); const ib = CAT_ORDER.indexOf(b[0])
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || b[1] - a[1]
+    })
+  }, [enriched])
 
   const visible = useMemo(
-    () => channels
-      .filter((c) => (group === '★ Favoris' ? favs.has(c.name + '|' + c.group) : !group || (c.group || 'Autres') === group))
-      .filter((c) => !q || c.name.toLowerCase().includes(q.toLowerCase()))
-      .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
-    [channels, group, q, favs],
+    () => enriched
+      .filter((c) => (group === '★ Favoris' ? favs.has(c.name + '|' + c.group) : !group || c.cat === group))
+      .filter((c) => {
+        if (!q) return true
+        const nq = normCh(q)
+        const cn = normCh(c.name)
+        if (cn.includes(nq)) return true
+        const r = REGMAP.get(cn)
+        return !!r && (normCh(r.name).includes(nq) || r.aliases.some((a) => normCh(a).includes(nq)))
+      })
+      .sort((a, b) => (a.num ?? 9999) - (b.num ?? 9999) || a.name.localeCompare(b.name, 'fr')),
+    [enriched, group, q, favs],
   )
 
   const play = async (ch: TvChannel) => {
@@ -258,9 +315,15 @@ export default function TVPage() {
             >
               {/* Halo décoratif */}
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(var(--acc),0.10),transparent_65%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+              {/* Numéro TNT */}
+              {ch.num != null && (
+                <span className="absolute left-2 top-2 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[rgb(var(--acc))] backdrop-blur-sm">
+                  {ch.num}
+                </span>
+              )}
               {/* Badge LIVE */}
               {current?.name === ch.name && current?.group === ch.group && (
-                <span className="absolute left-2 top-2 flex items-center gap-1.5 rounded bg-[rgb(var(--acc))] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+                <span className={`absolute top-2 flex items-center gap-1.5 rounded bg-[rgb(var(--acc))] ${ch.num != null ? 'left-9' : 'left-2'}` px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
                   En direct
                 </span>
@@ -283,7 +346,7 @@ export default function TVPage() {
                   <img src={ch.logo} alt="" loading="lazy" className="max-h-12 w-auto max-w-[80%] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 ) : (
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgb(var(--acc))]/25 text-xl font-bold text-[rgb(var(--acc))]">
-                    {ch.name.slice(0, 1).toUpperCase()}
+                    {ch.name.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
                   </span>
                 )}
               </div>

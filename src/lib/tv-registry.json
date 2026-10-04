@@ -1,0 +1,494 @@
+[
+ {
+  "name": "TF1",
+  "aliases": [
+   "tf1"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Logo_TF1_2013.svg/langfr-330px-Logo_TF1_2013.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 1,
+  "desc": "chaîne de télévision française"
+ },
+ {
+  "name": "France 2",
+  "aliases": [
+   "france 2"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 2,
+  "desc": "chaîne de télévision publique française"
+ },
+ {
+  "name": "France 3",
+  "aliases": [
+   "france 3"
+  ],
+  "cat": "TNT",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/9/9c/France_3_Cote_d%27Azur_-_Logo_2018.svg",
+  "num": 3,
+  "desc": "chaîne de télévision publique française"
+ },
+ {
+  "name": "France 5",
+  "aliases": [
+   "france 5"
+  ],
+  "cat": "TNT",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/France_5_2018.svg/960px-France_5_2018.svg.png",
+  "num": 4,
+  "desc": "chaîne de télévision publique française"
+ },
+ {
+  "name": "M6",
+  "aliases": [
+   "m6"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/Logo_M6_%282020%2C_fond_clair%29.svg/langfr-330px-Logo_M6_%282020%2C_fond_clair%29.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 5,
+  "desc": "chaîne de télévision généraliste française"
+ },
+ {
+  "name": "Arte",
+  "aliases": [
+   "arte"
+  ],
+  "cat": "TNT",
+  "logo": "https://i.imgur.com/ecXMjNl.png",
+  "num": 6,
+  "desc": "chaîne de service public franco-allemande"
+ },
+ {
+  "name": "C8",
+  "aliases": [
+   "c8"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Logo_C8_2016.svg/langfr-330px-Logo_C8_2016.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 7,
+  "desc": "ancienne chaîne de télévision généraliste privée française disparue"
+ },
+ {
+  "name": "W9",
+  "aliases": [
+   "w9"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/W9_2018.svg/langfr-330px-W9_2018.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 8,
+  "desc": "chaîne de télévision française"
+ },
+ {
+  "name": "TMC",
+  "aliases": [
+   "tmc"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/fr/thumb/a/a8/TMC_logo_2016.svg/langfr-330px-TMC_logo_2016.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 9,
+  "desc": "chaîne de télévision généraliste française d'origine monégasque"
+ },
+ {
+  "name": "TFX",
+  "aliases": [
+   "tfx"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/fr/thumb/8/83/TFX_logo_2018.svg/langfr-330px-TFX_logo_2018.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 10,
+  "desc": "chaîne de télévision française"
+ },
+ {
+  "name": "NRJ 12",
+  "aliases": [
+   "nrj 12"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/45/NRJ12_logo_2015.svg/langfr-330px-NRJ12_logo_2015.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 11,
+  "desc": "ancienne chaîne de télévision française"
+ },
+ {
+  "name": "LCP",
+  "aliases": [
+   "lcp"
+  ],
+  "cat": "TNT",
+  "logo": "https://upload.wikimedia.org/wikipedia/fr/6/6a/Logo_LCP-AN_-_Public_S%C3%A9nat_%282019%29.svg?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=original",
+  "num": 12
+ },
+ {
+  "name": "France 4",
+  "aliases": [
+   "france 4"
+  ],
+  "cat": "TNT",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/France_4_2018.svg/960px-France_4_2018.svg.png",
+  "num": 13
+ },
+ {
+  "name": "BFM TV",
+  "aliases": [
+   "bfm tv",
+   "bfmtv"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 14
+ },
+ {
+  "name": "CNews",
+  "aliases": [
+   "cnews"
+  ],
+  "cat": "TNT",
+  "logo": "https://i.imgur.com/sSNhk2g.png",
+  "num": 15
+ },
+ {
+  "name": "CStar",
+  "aliases": [
+   "cstar"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 16,
+  "desc": "chaîne de télévision privée diffusé en France"
+ },
+ {
+  "name": "Gulli",
+  "aliases": [
+   "gulli"
+  ],
+  "cat": "TNT",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/a/ac/Gulli_logo_2023.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=original",
+  "num": 17
+ },
+ {
+  "name": "TF1 Séries Films",
+  "aliases": [
+   "tf1 séries films",
+   "tf1 series films"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 18
+ },
+ {
+  "name": "L'Équipe",
+  "aliases": [
+   "l'équipe",
+   "lequipe",
+   "l equipe"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 19
+ },
+ {
+  "name": "6ter",
+  "aliases": [
+   "6ter"
+  ],
+  "cat": "TNT",
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Logo_6ter_2016.svg/langfr-330px-Logo_6ter_2016.svg.png?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+  "num": 22,
+  "desc": "chaîne de télévision française"
+ },
+ {
+  "name": "RMC Story",
+  "aliases": [
+   "rmc story"
+  ],
+  "cat": "TNT",
+  "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/4/43/Logo_RMC_Story_2025.png/960px-Logo_RMC_Story_2025.png",
+  "num": 23
+ },
+ {
+  "name": "RMC Découverte",
+  "aliases": [
+   "rmc découverte",
+   "rmc decouverte"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 24
+ },
+ {
+  "name": "Chérie 25",
+  "aliases": [
+   "chérie 25",
+   "cherie 25"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 25
+ },
+ {
+  "name": "LCI",
+  "aliases": [
+   "lci"
+  ],
+  "cat": "TNT",
+  "logo": "https://i.imgur.com/DED8EXs.png",
+  "num": 26
+ },
+ {
+  "name": "franceinfo:",
+  "aliases": [
+   "franceinfo"
+  ],
+  "cat": "TNT",
+  "logo": null,
+  "num": 27
+ },
+ {
+  "name": "Canal+",
+  "aliases": [
+   "canal+"
+  ],
+  "cat": "Cinéma & Séries",
+  "logo": "https://i.imgur.com/fvPoNEa.jpeg"
+ },
+ {
+  "name": "Canal+ Sport",
+  "aliases": [
+   "canal+ sport",
+   "canal plus sport"
+  ],
+  "cat": "Sport",
+  "logo": "https://i.imgur.com/EOXnU15.png"
+ },
+ {
+  "name": "Canal+ Cinéma",
+  "aliases": [
+   "canal+ cinéma"
+  ],
+  "cat": "Cinéma & Séries",
+  "logo": null
+ },
+ {
+  "name": "Ciné+ Premier",
+  "aliases": [
+   "ciné+ premier",
+   "cine+ premier",
+   "cine plus premier"
+  ],
+  "cat": "Cinéma & Séries",
+  "logo": null
+ },
+ {
+  "name": "OCS",
+  "aliases": [
+   "ocs"
+  ],
+  "cat": "Cinéma & Séries",
+  "logo": null
+ },
+ {
+  "name": "Paramount+",
+  "aliases": [
+   "paramount+"
+  ],
+  "cat": "Cinéma & Séries",
+  "logo": null
+ },
+ {
+  "name": "beIN Sports 1",
+  "aliases": [
+   "bein sports 1",
+   "bein sport 1",
+   "beinsports 1"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "beIN Sports 2",
+  "aliases": [
+   "bein sports 2",
+   "bein sport 2"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "Eurosport 1",
+  "aliases": [
+   "eurosport 1"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "Eurosport 2",
+  "aliases": [
+   "eurosport 2"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "RMC Sport 1",
+  "aliases": [
+   "rmc sport 1"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "RMC Sport 2",
+  "aliases": [
+   "rmc sport 2"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "DAZN 1",
+  "aliases": [
+   "dazn 1"
+  ],
+  "cat": "Sport",
+  "logo": null
+ },
+ {
+  "name": "Paris Première",
+  "aliases": [
+   "paris première",
+   "paris premiere"
+  ],
+  "cat": "Cinéma & Séries",
+  "logo": "https://i.imgur.com/ily4bEm.png"
+ },
+ {
+  "name": "Canal J",
+  "aliases": [
+   "canal j"
+  ],
+  "cat": "Jeunesse",
+  "logo": null
+ },
+ {
+  "name": "TiJi",
+  "aliases": [
+   "tiji"
+  ],
+  "cat": "Jeunesse",
+  "logo": null
+ },
+ {
+  "name": "Gulli Max",
+  "aliases": [
+   "gulli max"
+  ],
+  "cat": "Jeunesse",
+  "logo": null
+ },
+ {
+  "name": "Disney Channel",
+  "aliases": [
+   "disney channel"
+  ],
+  "cat": "Jeunesse",
+  "logo": null
+ },
+ {
+  "name": "Cartoon Network",
+  "aliases": [
+   "cartoon network"
+  ],
+  "cat": "Jeunesse",
+  "logo": null
+ },
+ {
+  "name": "Boomerang",
+  "aliases": [
+   "boomerang"
+  ],
+  "cat": "Jeunesse",
+  "logo": null
+ },
+ {
+  "name": "Nickelodéon",
+  "aliases": [
+   "nickelodéon",
+   "nickelodeon"
+  ],
+  "cat": "Jeunesse",
+  "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Nickelodeon_Junior.png/960px-Nickelodeon_Junior.png"
+ },
+ {
+  "name": "MCM",
+  "aliases": [
+   "mcm"
+  ],
+  "cat": "Musique",
+  "logo": "https://i.imgur.com/j31lBL7.png"
+ },
+ {
+  "name": "NRJ Hits",
+  "aliases": [
+   "nrj hits"
+  ],
+  "cat": "Musique",
+  "logo": "https://i.imgur.com/2xDVwOh.png"
+ },
+ {
+  "name": "Trace Urban",
+  "aliases": [
+   "trace urban"
+  ],
+  "cat": "Musique",
+  "logo": "https://i.imgur.com/DLIbUMx.png"
+ },
+ {
+  "name": "Clubbing TV",
+  "aliases": [
+   "clubbing tv"
+  ],
+  "cat": "Musique",
+  "logo": "https://i.imgur.com/MyiA92q.png"
+ },
+ {
+  "name": "France 24",
+  "aliases": [
+   "france 24"
+  ],
+  "cat": "Info",
+  "logo": "https://i.imgur.com/u8N6uoj.png"
+ },
+ {
+  "name": "Euronews",
+  "aliases": [
+   "euronews"
+  ],
+  "cat": "Info",
+  "logo": "https://i.imgur.com/8t9mdg9.png"
+ },
+ {
+  "name": "TV5Monde",
+  "aliases": [
+   "tv5monde"
+  ],
+  "cat": "Monde",
+  "logo": "https://i.imgur.com/WmRbudc.png"
+ },
+ {
+  "name": "BFM Paris",
+  "aliases": [
+   "bfm paris"
+  ],
+  "cat": "Info",
+  "logo": null
+ },
+ {
+  "name": "LCP Public Sénat",
+  "aliases": [
+   "public sénat"
+  ],
+  "cat": "Info",
+  "logo": null
+ }
+]
