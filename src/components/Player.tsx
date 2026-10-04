@@ -169,6 +169,9 @@ export default function Player({ req, onClose, minimized, onToggleMinimize }: {
   // Pistes audio multiples (HLS multi-langues, ou pistes natives exposées
   // par le navigateur) : liste + piste active + menu.
   const [audioTracks, setAudioTracks] = useState<{ id: number; label: string }[]>([])
+  // Sélecteur de piste audio pour le transcode (sources multi-pistes)
+  const [tcAudioCount, setTcAudioCount] = useState(0)
+  const [tcAudioIdx, setTcAudioIdx] = useState(0)
   const [activeAudio, setActiveAudio] = useState(0)
   const [audioMenu, setAudioMenu] = useState(false)
   const [subError, setSubError] = useState<string | null>(null)
@@ -752,6 +755,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
                 }
                 // AUCUNE alternative sûre : transcodage immédiat de la meilleure
                 // source courante (vidéo copiée bit à bit, audio ré-encodé AAC).
+                setTcAudioIdx(0)
                 toast('🎧 Piste AC3/DTS incompatible → conversion audio en direct…')
                 tcFinalUrlRef.current = finalUrl
                 tcDurationRef.current = 0
@@ -1439,6 +1443,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
           tcDurationRef.current = j.duration
           setDuration(j.duration)
         }
+        setTcAudioCount(typeof j.audioTrack === 'number' && j.audioTrack > 0 ? j.audioTrack : 1)
         // HEVC/x265 : le transcodage ne ré-encode QUE l'audio — la vidéo
         // resterait illisible dans Chrome. Inutile de continuer.
         if (/hevc|h265/.test(j.videoCodec ?? '')) {
@@ -1456,7 +1461,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
     setTcActive(true)
     tcActiveRef.current = true
     setBuffering(true)
-    v.src = `/api/stream/transcode?url=${encodeURIComponent(base)}&t=${Math.floor(target)}${fix1080 ? '&q=1080' : ''}`
+    v.src = `/api/stream/transcode?url=${encodeURIComponent(base)}&t=${Math.floor(target)}${fix1080 ? '&q=1080' : ''}${tcAudioIdx > 0 ? `&ai=${tcAudioIdx}` : ''}`
     tryAutoplay(v)
     const wdogTc = v.src
     setTimeout(() => {
@@ -1586,6 +1591,13 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
       if (document.pictureInPictureElement) await document.exitPictureInPicture()
       else await v.requestPictureInPicture()
     } catch { /* non supporté */ }
+  }
+
+  /** Bascule la piste audio du transcode (sources multi-pistes). */
+  const switchTcAudio = async (i: number) => {
+    setTcAudioIdx(i)
+    setAudioMenu(false)
+    await startTranscode(videoRef.current?.currentTime ?? 0)
   }
 
   /** Bascule la piste audio : hls.js pour le HLS, audioTracks natif sinon. */
@@ -2478,6 +2490,22 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
                             className={`w-full rounded px-3 py-2 text-left text-sm hover:bg-white/10 ${activeAudio === t.id ? 'text-[rgb(var(--acc))]' : ''}`}
                           >
                             {t.label}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {tcAudioCount > 1 && (
+                      <>
+                        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/40">
+                          PISTE (CONVERSION AUDIO)
+                        </p>
+                        {Array.from({ length: tcAudioCount }, (_, i) => i).map((i) => (
+                          <button
+                            key={`tc-audio-${i}`}
+                            onClick={() => switchTcAudio(i)}
+                            className={`w-full rounded px-3 py-2 text-left text-sm hover:bg-white/10 ${tcAudioIdx === i ? 'text-[rgb(var(--acc))]' : ''}`}
+                          >
+                            Piste {i + 1}
                           </button>
                         ))}
                       </>
