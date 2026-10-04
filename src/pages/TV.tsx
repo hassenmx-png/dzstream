@@ -7,8 +7,8 @@ interface EpgEntry { now: string; stop: number; next?: string }
 type EpgMap = Record<string, EpgEntry>
 
 // Registre curé des vraies chaînes FR : logos officiels, numéros TNT, catégories.
-import tvRegistry from '@/lib/tv-registry.json'
 import tvDead from '@/lib/tv-dead.json'
+import tvRegistry from '@/lib/tv-registry.json'
 
 type TvReg = { name: string; aliases: string[]; cat: string; num?: number; logo?: string; desc?: string }
 const TVREG = tvRegistry as TvReg[]
@@ -195,7 +195,6 @@ export default function TVPage() {
     if (url.startsWith('http://')) url = '/api/stream/tvproxy?u=' + encodeURIComponent(url)
     hlsRef.current?.destroy()
     hlsRef.current = null
-    if (v.canPlayType('application/vnd.apple.mpegurl')) {
     if (v.canPlayType('application/vnd.apple.mpegurl')) {
       v.src = url
     } else {
