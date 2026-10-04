@@ -10,10 +10,6 @@ type EpgMap = Record<string, EpgEntry>
 import tvRegistry from '@/lib/tv-registry.json'
 import tvDead from '@/lib/tv-dead.json'
 
-// Grand ménage : chaînes testées mortes (404/timeout au healthcheck serveur).
-// Relancer /tmp/tvtest.py sur le VPS régénère la liste.
-const DEAD = new Set<string>([...(tvDead.m3u ?? []), ...(tvDead.voo ?? [])].map(normCh))
-
 type TvReg = { name: string; aliases: string[]; cat: string; num?: number; logo?: string; desc?: string }
 const TVREG = tvRegistry as TvReg[]
 
@@ -27,6 +23,10 @@ for (const r of TVREG) {
   REGMAP.set(normCh(r.name), r)
   for (const a of r.aliases) if (!REGMAP.has(normCh(a))) REGMAP.set(normCh(a), r)
 }
+
+// Grand ménage : chaînes testées mortes (404/timeout au healthcheck serveur).
+// Relancer /tmp/tvtest.py sur le VPS régénère la liste.
+const DEAD = new Set<string>([...(tvDead.m3u ?? []), ...(tvDead.voo ?? [])].map(normCh))
 
 const GROUP_MAP: Record<string, string> = {
   music: 'Musique', sports: 'Sport', sport: 'Sport', news: 'Info', kids: 'Jeunesse',
