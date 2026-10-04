@@ -190,8 +190,12 @@ export default function TVPage() {
       if (!resolved) return
       url = resolved
     }
+    // Flux http:// : contenu mixte bloque par la page HTTPS -> routage par le
+    // proxy serveur (HTTPS meme-origine, reecriture HLS + Referer geres).
+    if (url.startsWith('http://')) url = '/api/stream/tvproxy?u=' + encodeURIComponent(url)
     hlsRef.current?.destroy()
     hlsRef.current = null
+    if (v.canPlayType('application/vnd.apple.mpegurl')) {
     if (v.canPlayType('application/vnd.apple.mpegurl')) {
       v.src = url
     } else {
