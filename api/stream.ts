@@ -631,6 +631,7 @@ app.get("/transcode", async (c) => {
   const t = Math.max(0, parseFloat(c.req.query("t") ?? "0") || 0);
   const eco1080 = c.req.query("q") === "1080";
   let track = parseInt(c.req.query("track") ?? "-1", 10);
+  const audioIdx = parseInt(c.req.query("ai") ?? "0", 10); // piste audio (0 = première)
   if (track < 0) {
     const info = await probeTcInfo(url).catch(() => null);
     track = info?.audioTrack ?? -1;
@@ -647,7 +648,7 @@ app.get("/transcode", async (c) => {
     "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
     "-i", input,
     "-map", "0:v:0",
-    ...(track >= 0 ? ["-map", `0:${track}`] : ["-map", "0:a:0"]),
+    ...(track >= 0 ? ["-map", `0:${track}`] : ["-map", `0:a:${Number.isFinite(audioIdx) && audioIdx > 0 ? audioIdx : 0}`]),
     // Mode éco (q=1080) : réencodage 1080p x264 veryfast (temps réel sur 2 vCPU).
     // Sinon vidéo copiée telle quelle (zéro CPU, qualité d'origine).
     ...(eco1080
