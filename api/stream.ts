@@ -761,22 +761,25 @@ async function handlePlay(c: any) {
   if (data.e && data.e < Date.now()) return c.json({ error: "lien expiré (6 h max)" }, 410);
   const target = data.u.replace("https://comet.dzstream.duckdns.org", "http://127.0.0.1:8001");
 
+  // Audio Fix : piste AC3/DTS non décodée par le navigateur -> transcodage
+  // audio AAC à la volée via mediaflow (vidéo H.264 copiée, seek préservé
+  // par index de cues). AVANT la redirection torrentio : dans le WebView de
+  // l'app, Cloudflare bloque la requête navigateur vers torrentio.strem.fun
+  // (« source injoignable ») ; le VPN de mediaflow passe sans problème.
+  // Le drapeau t est posé par /wrap côté client.
+  if (data.t) {
+    const d = encodeURIComponent(target);
+    const pw = process.env.MEDIAFLOW_API_PASSWORD || "";
+    const auth = pw ? `&api_password=${encodeURIComponent(pw)}` : "";
+    return c.redirect(`https://dzstream.duckdns.org/mf/proxy/stream?d=${d}&transcode=true${auth}`, 302);
+  }
+
   // Torrentio est derrière Cloudflare qui bloque les clients non-navigateur
   // (empreinte TLS, UA trompeur ou pas). On redirige donc le VRAI navigateur
   // directement : il passera la protection sans problème. La clé debrid dans
   // l'URL est celle de l'utilisateur, déjà visible dans son propre navigateur.
   if (/^https:\/\/torrentio\.strem\.fun\//.test(target)) {
     return c.redirect(target, 302);
-  }
-
-  // Audio Fix : piste AC3/DTS non décodée par le navigateur -> transcodage
-  // audio AAC à la volée via mediaflow (vidéo H.264 copiée, seek préservé
-  // par index de cues). Le drapeau t est posé par /wrap côté client.
-  if (data.t) {
-    const d = encodeURIComponent(target);
-    const pw = process.env.MEDIAFLOW_API_PASSWORD || "";
-    const auth = pw ? `&api_password=${encodeURIComponent(pw)}` : "";
-    return c.redirect(`https://dzstream.duckdns.org/mf/proxy/stream?d=${d}&transcode=true${auth}`, 302);
   }
 
   // Passthrough : on stream tel quel en préservant les en-têtes de plage
