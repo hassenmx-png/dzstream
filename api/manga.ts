@@ -204,9 +204,19 @@ mangaApp.post("/:id/library", async (c) => {
 
 mangaApp.get("/:id/chapters", async (c) => {
   const id = c.req.param("id");
-  const d = await md(
+  // FR d'abord ; si le manga n'a aucun chapitre FR (le catalogue FR de
+  // MangaDex est pauvre pour la plupart des séries), on bascule sur l'anglais
+  // plutôt que d'afficher une liste vide. Les chapitres EN sont étiquetés.
+  let lang = "fr";
+  let d = await md(
     `/manga/${id}/feed?translatedLanguage[]=fr&limit=500&includes[]=scanlation_group`,
   );
+  if (!(d.data ?? []).length) {
+    lang = "en";
+    d = await md(
+      `/manga/${id}/feed?translatedLanguage[]=en&limit=500&includes[]=scanlation_group`,
+    );
+  }
   const seen = new Set<string>();
   const out: any[] = [];
   for (const ch of d.data ?? []) {
@@ -221,6 +231,7 @@ mangaApp.get("/:id/chapters", async (c) => {
       chapterNumber: parseFloat(num),
       volume: ch.attributes.volume ?? null,
       scanlator: grp?.attributes?.name,
+      lang,
     });
   }
   out.sort((a, b) => (b.chapterNumber ?? 0) - (a.chapterNumber ?? 0));
