@@ -8,6 +8,11 @@ type EpgMap = Record<string, EpgEntry>
 
 // Registre curé des vraies chaînes FR : logos officiels, numéros TNT, catégories.
 import tvRegistry from '@/lib/tv-registry.json'
+import tvDead from '@/lib/tv-dead.json'
+
+// Grand ménage : chaînes testées mortes (404/timeout au healthcheck serveur).
+// Relancer /tmp/tvtest.py sur le VPS régénère la liste.
+const DEAD = new Set<string>([...(tvDead.m3u ?? []), ...(tvDead.voo ?? [])].map(normCh))
 
 type TvReg = { name: string; aliases: string[]; cat: string; num?: number; logo?: string; desc?: string }
 const TVREG = tvRegistry as TvReg[]
@@ -144,7 +149,10 @@ export default function TVPage() {
   const epgOf = (ch: TvChannel): EpgEntry | undefined =>
     ch.tvgId ? epg?.[ch.tvgId.split('@')[0]] : undefined
 
-  const enriched = useMemo(() => channels.map(enrich), [channels])
+  const enriched = useMemo(
+    () => channels.map(enrich).filter((c) => !DEAD.has(normCh(c.name))),
+    [channels],
+  )
 
   const groups = useMemo(() => {
     const g = new Map<string, number>()
