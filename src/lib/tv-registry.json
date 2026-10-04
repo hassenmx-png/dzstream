@@ -15,7 +15,7 @@
    "france 2"
   ],
   "cat": "TNT",
-  "logo": null,
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/France_2_Logo_2002.svg/330px-France_2_Logo_2002.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
   "num": 2,
   "desc": "chaîne de télévision publique française"
  },
@@ -134,7 +134,7 @@
    "bfmtv"
   ],
   "cat": "TNT",
-  "logo": null,
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/BFM_Business_logo_2023.png/330px-BFM_Business_logo_2023.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
   "num": 14
  },
  {
@@ -152,7 +152,7 @@
    "cstar"
   ],
   "cat": "TNT",
-  "logo": null,
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Canal_Star_logo.svg/330px-Canal_Star_logo.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
   "num": 16,
   "desc": "chaîne de télévision privée diffusé en France"
  },
@@ -172,7 +172,7 @@
    "tf1 series films"
   ],
   "cat": "TNT",
-  "logo": null,
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Logo_TF1_S%C3%A9ries_Films_2018.jpg/330px-Logo_TF1_S%C3%A9ries_Films_2018.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
   "num": 18
  },
  {
@@ -183,7 +183,7 @@
    "l equipe"
   ],
   "cat": "TNT",
-  "logo": null,
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/L%27%C3%89quipe_TV_%28logo%2C_1998-2005%29.svg/330px-L%27%C3%89quipe_TV_%28logo%2C_1998-2005%29.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
   "num": 19
  },
  {
@@ -311,7 +311,7 @@
    "bein sport 2"
   ],
   "cat": "Sport",
-  "logo": null
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/BeIN_Sports_2_logo.svg/330px-BeIN_Sports_2_logo.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
  },
  {
   "name": "Eurosport 1",
@@ -319,7 +319,7 @@
    "eurosport 1"
   ],
   "cat": "Sport",
-  "logo": null
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Eurosport_Logo_%282011-2015%29.svg/330px-Eurosport_Logo_%282011-2015%29.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
  },
  {
   "name": "Eurosport 2",
@@ -327,7 +327,7 @@
    "eurosport 2"
   ],
   "cat": "Sport",
-  "logo": null
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Eurosport_2_HD_Logo_%282011-2015%29.svg/330px-Eurosport_2_HD_Logo_%282011-2015%29.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
  },
  {
   "name": "RMC Sport 1",
@@ -335,7 +335,7 @@
    "rmc sport 1"
   ],
   "cat": "Sport",
-  "logo": null
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Logo_RMC_Sport_1_2018.svg/330px-Logo_RMC_Sport_1_2018.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
  },
  {
   "name": "RMC Sport 2",
@@ -343,7 +343,7 @@
    "rmc sport 2"
   ],
   "cat": "Sport",
-  "logo": null
+  "logo": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Logo_RMC_Sport_2_2018.svg/330px-Logo_RMC_Sport_2_2018.svg.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail"
  },
  {
   "name": "DAZN 1",
