@@ -323,7 +323,7 @@ export default function TVPage() {
               )}
               {/* Badge LIVE */}
               {current?.name === ch.name && current?.group === ch.group && (
-                <span className={`absolute top-2 flex items-center gap-1.5 rounded bg-[rgb(var(--acc))] ${ch.num != null ? 'left-9' : 'left-2'} px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white`}
+                <span className={`absolute top-2 flex items-center gap-1.5 rounded bg-[rgb(var(--acc))] ${ch.num != null ? 'left-9' : 'left-2'} px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white`}>
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" aria-hidden />
                   En direct
                 </span>
