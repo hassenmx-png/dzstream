@@ -39,3 +39,6 @@ subprojects {
         }
     }
 }
+
+// Signature debug permanente (mise a jour sans desinstallation)
+apply from: 'dz-signing.gradle'
