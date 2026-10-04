@@ -18,7 +18,7 @@ type WTClient = InstanceType<typeof WebTorrent>;
  * WebTorrent navigateur.
  */
 
-const app = new Hono();const app = new Hono();
+const app = new Hono();
 
 // Proxy TV : joue les flux http:// (contenu mixte bloque cote client HTTPS)
 // et referer-proteges, en HTTPS meme-origine. Playlists m3u8 reecrites
