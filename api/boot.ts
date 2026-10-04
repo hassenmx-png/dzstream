@@ -157,6 +157,7 @@ app.use("/api/trpc/*", async (c) => {
 
 // Streaming P2P serveur + proxy HTTP (lecture vidéo)
 app.route("/api/stream", streamApp);
+app.route("/api/stream/tvproxy", (await import("./tvproxy")).tvproxyApp);
 
 // Synchro progression/liste entre appareils (code sans compte)
 app.route("/api/sync", syncApp);
