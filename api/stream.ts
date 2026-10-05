@@ -20,16 +20,6 @@ type WTClient = InstanceType<typeof WebTorrent>;
 
 const app = new Hono();
 
-// Journal temporaire de diagnostic (lecture / transcode depuis les apps)
-app.use("*", async (c, next) => {
-  const t0 = Date.now();
-  await next();
-  const st = c.res.status;
-  if (c.req.path.includes("/play/") && st === 206) return; // seek : trop verbeux
-  const q = c.req.url.split("?")[1];
-  console.log(`[stream] ${c.req.method} ${c.req.path}${q ? " ?" + q.slice(0, 80) : ""} -> ${st} (${Date.now() - t0}ms)`);
-});
-
 // ---- Client WebTorrent partagé (chargement paresseux + tolérant) ----
 
 let clientPromise: Promise<WTClient> | null = null;
