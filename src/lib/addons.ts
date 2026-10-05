@@ -1027,6 +1027,7 @@ export function ensureServerDebridAddon(): void {
     const base = (u: string) => u.replace(/\/manifest\.json$/i, '')
     if (d.url) add(base(d.url), d.manifest)
     if (d.animesub?.url) add(base(d.animesub.url), d.animesub.manifest)
+    if (Array.isArray(d.extra)) for (const e of d.extra) { if (e?.url) add(base(e.url), e.manifest) }
     if (changed) writeJSON(KEY, list)
   }).catch(() => {})
 }

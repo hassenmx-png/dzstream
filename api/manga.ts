@@ -182,6 +182,20 @@ mangaApp.get("/debrid-addon", async (c) => {
       if (r2.ok) out.animesub = { url: cfg.animesub, manifest: await r2.json() };
     } catch { /* addon anime indisponible : on ignore */ }
   }
+  // Addons supplementaires injectes par le serveur (ex. Lumio) : liste
+  // d URLs de manifest personnelles dans data/debrid-addon.json ("extra").
+  const extraList = (cfg as Record<string, unknown>).extra;
+  if (Array.isArray(extraList)) {
+    const extras: { url: string; manifest: unknown }[] = [];
+    for (const u of extraList.slice(0, 5)) {
+      if (typeof u !== "string" || !u) continue;
+      try {
+        const r3 = await fetch(u);
+        if (r3.ok) extras.push({ url: u, manifest: await r3.json() });
+      } catch { /* addon indisponible : on ignore */ }
+    }
+    if (extras.length) out.extra = extras;
+  }
   return c.json(out);
 });
 
