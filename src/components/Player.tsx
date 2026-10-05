@@ -113,6 +113,9 @@ export default function Player({ req, onClose, minimized, onToggleMinimize }: {
   // Sélecteur de piste audio pour le transcode (sources multi-pistes)
   const [tcAudioCount, setTcAudioCount] = useState(0)
   const [tcAudioIdx, setTcAudioIdx] = useState(0)
+  // Langues REELLES du fichier (sonde ffprobe serveur) — les titres de
+  // torrents mentent souvent, elles non.
+  const [tcAudioLangs, setTcAudioLangs] = useState<string[]>([])
   const [activeAudio, setActiveAudio] = useState(0)
   const [audioMenu, setAudioMenu] = useState(false)
   // --- Gestes mobiles (double-tap ±10 s, balayages volume / luminosité) ---
@@ -719,6 +722,18 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
             // Mémorise l'URL directe : si le son s'avère indécodable (AC3/DTS
             // non déclaré), le transcodage serveur repartira de CE lien.
             tcFinalUrlRef.current = playUrl
+            // Sonde ffprobe en arriere-plan : vraies langues audio du fichier
+            // (le titre du torrent ment souvent). Corrige le chip VF/VOSTFR
+            // et remplit le menu audio de pistes reelles, sans bloquer la
+            // lecture. Cache serveur 10 min : quasi gratuit au 2e visionnage.
+            void fetch(`/api/stream/tc-info?url=${encodeURIComponent(playUrl)}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .then((j) => {
+                if (!j || !Array.isArray(j.audioLangs) || j.audioLangs.length === 0) return
+                setTcAudioLangs(j.audioLangs)
+                setTcAudioCount(j.audioLangs.length)
+              })
+              .catch(() => { /* sonde indisponible : on garde les etiquettes du titre */ })
             video!.load()
             tryAutoplay(video!)
             const wdogSrc = url
@@ -1354,21 +1369,24 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
    * Le serveur copie la vidéo bit à bit et ré-encode seul l'audio en AAC.
    * `at` = position virtuelle de départ (le flux ffmpeg démarre là).
    */
-  const startTranscode = async (at: number) => {
+  const startTranscode = async (at: number, aiOverride?: number) => {
     const base = tcFinalUrlRef.current
     const v = videoRef.current
     if (!base || !v) return
     const target = Math.max(0, at)
+    const aiEff = aiOverride ?? tcAudioIdx
     // Sonde serveur (ffprobe, cache 10 min) : vraie durée + codec vidéo.
     if (!tcDurationRef.current) {
       try {
         const r = await fetch(`/api/stream/tc-info?url=${encodeURIComponent(base)}`)
-        const j = (await r.json()) as { duration?: number; videoCodec?: string }
+        const j = (await r.json()) as { duration?: number; videoCodec?: string; audioLangs?: string[] }
         if (j.duration) {
           tcDurationRef.current = j.duration
           setDuration(j.duration)
         }
-        setTcAudioCount(typeof j.audioTrack === 'number' && j.audioTrack > 0 ? j.audioTrack : 1)
+        const langs = Array.isArray(j.audioLangs) ? j.audioLangs : []
+        setTcAudioLangs(langs)
+        setTcAudioCount(langs.length > 0 ? langs.length : 1)
         // HEVC/x265 : le transcodage ne ré-encode QUE l'audio — la vidéo
         // resterait illisible dans Chrome. Inutile de continuer.
         if (/hevc|h265/.test(j.videoCodec ?? '')) {
@@ -1386,7 +1404,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
     setTcActive(true)
     tcActiveRef.current = true
     setBuffering(true)
-    v.src = `/api/stream/transcode?url=${encodeURIComponent(base)}&t=${Math.floor(target)}${fix1080 ? '&q=1080' : ''}${tcAudioIdx > 0 ? `&ai=${tcAudioIdx}` : ''}`
+    v.src = `/api/stream/transcode?url=${encodeURIComponent(base)}&t=${Math.floor(target)}${fix1080 ? '&q=1080' : ''}${aiEff > 0 ? `&ai=${aiEff}` : ''}`
     tryAutoplay(v)
     const wdogTc = v.src
     setTimeout(() => {
@@ -1522,7 +1540,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
   const switchTcAudio = async (i: number) => {
     setTcAudioIdx(i)
     setAudioMenu(false)
-    await startTranscode(videoRef.current?.currentTime ?? 0)
+    await startTranscode(videoRef.current?.currentTime ?? 0, i)
   }
 
   /** Bascule la piste audio : hls.js pour le HLS, audioTracks natif sinon. */
@@ -1558,6 +1576,12 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
   const matchVersion = (a: ReturnType<typeof streamAudio>, k: VersionKey) =>
     k === 'VO' ? a === null : a === k
   const currentVersion: VersionKey | null = (() => {
+    // Verite terrain : la sonde ffprobe a lu les vraies pistes du fichier.
+    if (tcAudioLangs.length > 0) {
+      const hasFr = tcAudioLangs.some((l) => /^(fre|fra|fr)/i.test(l))
+      if (hasFr) return tcAudioLangs.length > 1 ? 'MULTI' : 'VF'
+      return 'VO' // aucune piste FR mesuree = VO, peu importe le titre
+    }
     const a = streamAudio(req.stream)
     if (a === 'VF') return 'VF'
     if (a === 'MULTI') return 'MULTI'
@@ -2191,6 +2215,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
                     activeAudio={activeAudio}
                     tcAudioCount={tcAudioCount}
                     tcAudioIdx={tcAudioIdx}
+                    tcAudioLangs={tcAudioLangs}
                     availableVersions={availableVersions}
                     currentVersion={currentVersion}
                     pickAudio={pickAudio}

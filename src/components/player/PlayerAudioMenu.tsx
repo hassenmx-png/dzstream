@@ -10,11 +10,32 @@ export interface PlayerVersionDef {
   label: string
 }
 
+
+/** Etiquette d une piste de conversion : langue ffprobe traduite, sinon Piste N. */
+function tcAudioLabel(lang: string | undefined, i: number): string {
+  if (!lang || lang === '?' || lang === 'und') return `Piste ${i + 1}`
+  const names: Record<string, string> = {
+    fre: '🇫🇷 Français', fra: '🇫🇷 Français', fr: '🇫🇷 Français',
+    eng: '🇬🇧 Anglais', en: '🇬🇧 Anglais',
+    jpn: '🇯🇵 Japonais', ja: '🇯🇵 Japonais',
+    spa: '🇪🇸 Espagnol', es: '🇪🇸 Espagnol',
+    ger: '🇩🇪 Allemand', deu: '🇩🇪 Allemand', de: '🇩🇪 Allemand',
+    ita: '🇮🇹 Italien', it: '🇮🇹 Italien',
+    por: '🇵🇹 Portugais', pt: '🇵🇹 Portugais',
+    rus: '🇷🇺 Russe', ru: '🇷🇺 Russe',
+    ara: '🇸🇦 Arabe', ar: '🇸🇦 Arabe',
+    chi: '🇨🇳 Chinois', zho: '🇨🇳 Chinois', zh: '🇨🇳 Chinois',
+    kor: '🇰🇷 Coréen', ko: '🇰🇷 Coréen',
+  }
+  return names[lang.toLowerCase()] ?? `${lang.toUpperCase()} (piste ${i + 1})`
+}
+
 export default function PlayerAudioMenu({
   audioTracks,
   activeAudio,
   tcAudioCount,
   tcAudioIdx,
+  tcAudioLangs,
   availableVersions,
   currentVersion,
   pickAudio,
@@ -25,6 +46,8 @@ export default function PlayerAudioMenu({
   activeAudio: number
   tcAudioCount: number
   tcAudioIdx: number
+  /** Langues REELLES mesurees par ffprobe (index aligne sur les pistes) */
+  tcAudioLangs?: string[]
   availableVersions: PlayerVersionDef[]
   currentVersion: PlayerVersionKey | null
   pickAudio: (id: number) => void
@@ -60,7 +83,7 @@ export default function PlayerAudioMenu({
             onClick={() => switchTcAudio(i)}
             className={`w-full rounded px-3 py-2 text-left text-sm hover:bg-white/10 ${tcAudioIdx === i ? 'text-[rgb(var(--acc))]' : ''}`}
           >
-            Piste {i + 1}
+            {tcAudioLabel(tcAudioLangs?.[i], i)}
           </button>
         ))}
       </>
