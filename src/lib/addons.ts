@@ -1018,7 +1018,19 @@ export function ensureServerDebridAddon(): void {
     const list = readJSON<InstalledAddon[]>(KEY, [])
     let changed = false
     const add = (url: string, manifest: unknown) => {
-      if (!url || !manifest || list.some(a => a.url === url)) return
+      if (!url || !manifest) return
+      const mid = (manifest as { id?: string }).id
+      // Meme addon deja present (meme id de manifest) mais avec une ANCIENNE
+      // URL (ex. Lumio configure a la main avec AllDebrid) : on le REMPLACE
+      // par la version serveur (Torbox) au lieu de laisser les deux.
+      const idx = list.findIndex(a => a.url === url || (mid && a.manifest?.id === mid))
+      if (idx >= 0) {
+        if (list[idx].url !== url) {
+          list[idx] = { ...list[idx], url, manifest, enabled: true }
+          changed = true
+        }
+        return
+      }
       list.push({ url, manifest, enabled: true, installedAt: Date.now() } as InstalledAddon)
       changed = true
     }
