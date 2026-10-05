@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Hls from 'hls.js'
 import {
-  X, Play, Pause, Volume2, VolumeX, Maximize, Users, ArrowDownToLine, AlertTriangle,
+  X, Play, Pause, Volume2, VolumeX, Maximize, Users, ArrowDownToLine,
   PictureInPicture2, Captions, Gauge, Moon, SkipBack, SkipForward, Rewind, FastForward, Cloud, Cast, Airplay,
-  Minimize2, Maximize2, RotateCcw, RotateCw, SunMedium, Expand, Shrink, Languages,
+  Minimize2, Maximize2, Expand, Shrink, Languages,
 } from 'lucide-react'
 import type { PlayRequest } from '@/lib/nav'
 import { traktMarkWatched } from '@/lib/trakt'
@@ -22,6 +22,9 @@ import PlayerAudioMenu from './player/PlayerAudioMenu'
 import PlayerSubMenu from './player/PlayerSubMenu'
 import PlayerSalonMenu from './player/PlayerSalonMenu'
 import { useSubtitles } from './player/useSubtitles'
+import PlayerGestureOverlay from './player/PlayerGestureOverlay'
+import PlayerNextEpisode from './player/PlayerNextEpisode'
+import PlayerErrorOverlay from './player/PlayerErrorOverlay'
 
 /**
  * Compteur d'échecs P2P serveur (persistant par appareil). Certains réseaux
@@ -1907,51 +1910,12 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
       )}
 
       {/* HUD des gestes : flash ±10 s sur les côtés, jauge volume/luminosité au centre */}
-      {!minimized && req.meta.type === 'series' && introSkippedFor.current !== req.meta.id && pos > 3 && pos < 150 && (
-        <button
-          onClick={skipIntro}
-          className="absolute right-4 top-20 z-30 rounded bg-white px-4 py-2 text-sm font-bold text-black shadow-lg transition-colors hover:bg-white/80"
-        >
-          Passer l'intro
-        </button>
-      )}
+      <PlayerGestureOverlay
+        hud={minimized ? null : hud}
+        showSkipIntro={!minimized && req.meta.type === 'series' && introSkippedFor.current !== req.meta.id && pos > 3 && pos < 150}
+        onSkipIntro={skipIntro}
+      />
 
-      {!minimized && hud && (
-        <div key={hud.id} className="pointer-events-none absolute inset-0 z-[40]">
-          {hud.kind === 'play' || hud.kind === 'pause' ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="hud-pop rounded-full bg-black/60 p-6 backdrop-blur">
-                {hud.kind === 'play'
-                  ? <Play size={56} className="fill-white text-white" />
-                  : <Pause size={56} className="fill-white text-white" />}
-              </div>
-            </div>
-          ) : hud.kind === 'subdelay' ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="rounded-md bg-black/60 px-4 py-2 text-sm font-mono text-[rgb(var(--acc))] backdrop-blur">
-                Sous-titres {hud.value > 0 ? '+' : ''}{hud.value.toFixed(1)} s
-              </span>
-            </div>
-          ) : hud.kind === 'seek-left' || hud.kind === 'seek-right' ? (
-            <div className={`absolute inset-y-0 ${hud.kind === 'seek-left' ? 'left-0' : 'right-0'} flex w-1/3 items-center justify-center`}>
-              <div className="hud-pop flex flex-col items-center gap-1 rounded-2xl bg-black/60 px-6 py-4 backdrop-blur">
-                {hud.kind === 'seek-left' ? <RotateCcw size={26} className="text-[rgb(var(--acc))]" /> : <RotateCw size={26} className="text-[rgb(var(--acc))]" />}
-                <span className="font-display text-lg">{hud.kind === 'seek-left' ? '−10 s' : '+10 s'}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="hud-pop flex items-center gap-3 rounded-full bg-black/60 px-5 py-3 backdrop-blur">
-                {hud.kind === 'volume' ? <Volume2 size={20} className="text-[rgb(var(--acc))]" /> : <SunMedium size={20} className="text-[rgb(var(--acc))]" />}
-                <div className="h-1.5 w-32 overflow-hidden rounded-full bg-white/20">
-                  <div className="h-full rounded-full bg-[rgb(var(--acc))] transition-[width] duration-100" style={{ width: `${Math.round(hud.value * 100)}%` }} />
-                </div>
-                <span className="w-9 text-right font-mono text-xs">{Math.round(hud.value * 100)}%</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Lecteur Webtor (cloud) — UI autonome, sans P2P côté client.
           100dvh = hauteur visible réelle sur mobile (barres du navigateur
@@ -2031,48 +1995,22 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
 
       {/* Épisode suivant : compte à rebours auto + déclenchement manuel */}
       {nearEnd && !minimized && (
-        <div className="absolute bottom-28 right-6 flex items-center gap-2 rise-in">
-          <button
-            onClick={(e) => { e.stopPropagation(); req.onNextEpisode?.() }}
-            className="flex items-center gap-2 rounded-sm bg-[rgb(var(--acc))] px-5 py-3 text-sm font-bold text-white hover:scale-105 transition-transform"
-          >
-            <SkipForward size={16} fill="currentColor" />
-            Épisode suivant {req.nextEpisodeLabel ?? ''}
-            {nextIn !== null && <span className="font-mono">({nextIn})</span>}
-          </button>
-          {nextIn !== null && (
-            <button
-              onClick={(e) => { e.stopPropagation(); nextCancelRef.current = true; setNextIn(null) }}
-              className="rounded-sm border border-white/25 bg-black/60 px-3 py-3 text-xs text-white/70 hover:text-white backdrop-blur"
-            >
-              Annuler
-            </button>
-          )}
-        </div>
+        <PlayerNextEpisode
+          nextIn={nextIn}
+          label={req.nextEpisodeLabel}
+          onNext={() => req.onNextEpisode?.()}
+          onCancel={() => { nextCancelRef.current = true; setNextIn(null) }}
+        />
       )}
 
       {/* Erreur */}
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-          <div className="max-w-md text-center space-y-4">
-            <AlertTriangle size={36} className="mx-auto text-amber-400" />
-            <p className="text-white/85">{error}</p>
-            <p className="text-white/40 text-sm">
-              Astuce : privilégie les sources avec le plus de seeders (👤), ou les liens Direct / HLS.
-            </p>
-            <button onClick={closeAndLeave} className="rounded-sm bg-[rgb(var(--acc))] px-6 py-2.5 text-sm font-bold text-white">
-              Choisir une autre source
-            </button>
-            {kind === 'torrent' && torrentMode === 'webtor' && (
-              <button
-                onClick={() => { setError(null); setTorrentMode('browser') }}
-                className="block mx-auto text-xs text-white/40 hover:text-[rgb(var(--acc))] underline underline-offset-4"
-              >
-                ou tenter en P2P navigateur (WebRTC)
-              </button>
-            )}
-          </div>
-        </div>
+        <PlayerErrorOverlay
+          error={error}
+          showP2PFallback={kind === 'torrent' && torrentMode === 'webtor'}
+          onClose={closeAndLeave}
+          onP2PFallback={() => { setError(null); setTorrentMode('browser') }}
+        />
       )}
 
       {/* Écran de chargement initial — cinématique : l'affiche du film en
