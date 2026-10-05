@@ -8,22 +8,20 @@ import {
 import type { PlayRequest } from '@/lib/nav'
 import { traktMarkWatched } from '@/lib/trakt'
 import { simklMarkWatched } from '@/lib/simkl'
-import { opensubsDownloadVtt } from '@/lib/opensubs'
 import { useNav } from '@/lib/nav'
 import { streamKind, formatBytes, isDebridStream, isDebridDown, setDebridDown, streamAudio, streamText, RISKY_AUDIO_RE, SAFE_AUDIO_RE } from '@/lib/addons'
 import { useProgress } from '@/lib/library'
 import { readJSON, writeJSON } from '@/lib/store'
-import { getSubPrefs, initSubPrefs, setSubPrefs, shiftVtt, type SubPrefs } from '@/lib/subprefs'
 import {
   createRoom, enterRoomAsGuest, fetchRoom, getActiveRoom, guestHeartbeat, joinRoomAndPlay,
   leaveRoom, normalizeRoomCode, pushRoomState, roomPosition, subscribeRoom,
   type ActiveRoom, type RoomMedia,
 } from '@/lib/room'
 import { toast } from '@/lib/toast'
-import type { SubtitleTrack } from '@/types'
 import PlayerAudioMenu from './player/PlayerAudioMenu'
 import PlayerSubMenu from './player/PlayerSubMenu'
 import PlayerSalonMenu from './player/PlayerSalonMenu'
+import { useSubtitles } from './player/useSubtitles'
 
 /**
  * Compteur d'échecs P2P serveur (persistant par appareil). Certains réseaux
@@ -72,69 +70,7 @@ function audioLabel(raw: string, index: number): string {
   return raw.trim() || `Piste ${index + 1}`
 }
 
-/** Codes de langue OpenSubtitles (ISO 639-2/3 et 2 lettres) → nom affiché. */
-const SUB_LANG_NAMES: Record<string, string> = {
-  fre: 'Français', fra: 'Français', fr: 'Français',
-  eng: 'Anglais', en: 'Anglais',
-  spa: 'Espagnol', es: 'Espagnol',
-  por: 'Portugais', pt: 'Portugais',
-  ger: 'Allemand', deu: 'Allemand', de: 'Allemand',
-  ita: 'Italien', it: 'Italien',
-  ara: 'Arabe', ar: 'Arabe',
-  rus: 'Russe', ru: 'Russe',
-  jpn: 'Japonais', ja: 'Japonais',
-  kor: 'Coréen', ko: 'Coréen',
-  chi: 'Chinois', zho: 'Chinois', zh: 'Chinois',
-  tur: 'Turc', tr: 'Turc',
-  pol: 'Polonais', pl: 'Polonais',
-  dut: 'Néerlandais', nld: 'Néerlandais', nl: 'Néerlandais',
-  swe: 'Suédois', sv: 'Suédois',
-  nor: 'Norvégien', no: 'Norvégien',
-  dan: 'Danois', da: 'Danois',
-  fin: 'Finnois', fi: 'Finnois',
-  hin: 'Hindi', hi: 'Hindi',
-  ukr: 'Ukrainien', uk: 'Ukrainien',
-  ron: 'Roumain', rum: 'Roumain', ro: 'Roumain',
-  hun: 'Hongrois', hu: 'Hongrois',
-  cze: 'Tchèque', ces: 'Tchèque', cs: 'Tchèque',
-  gre: 'Grec', ell: 'Grec', el: 'Grec',
-  heb: 'Hébreu', he: 'Hébreu',
-  bul: 'Bulgare', bg: 'Bulgare',
-  per: 'Persan', fas: 'Persan', fa: 'Persan',
-  vie: 'Vietnamien', vi: 'Vietnamien',
-  tha: 'Thaï', th: 'Thaï',
-  ind: 'Indonésien', id: 'Indonésien',
-  alb: 'Albanais', sqi: 'Albanais', sq: 'Albanais',
-  srp: 'Serbe', sr: 'Serbe',
-  hrv: 'Croate', hr: 'Croate',
-  slv: 'Slovène', slo: 'Slovène', sl: 'Slovène',
-  lit: 'Lituanien', lt: 'Lituanien',
-  lav: 'Letton', lv: 'Letton',
-  est: 'Estonien', et: 'Estonien',
-  cat: 'Catalan', ca: 'Catalan',
-  eus: 'Basque', eu: 'Basque',
-  glg: 'Galicien', gl: 'Galicien',
-  mlt: 'Maltais', mt: 'Maltais',
-  isl: 'Islandais', ice: 'Islandais', is: 'Islandais',
-  msa: 'Malais', may: 'Malais', ms: 'Malais',
-  ben: 'Bengali', bn: 'Bengali',
-  tam: 'Tamoul', ta: 'Tamoul',
-  tel: 'Télougou', te: 'Télougou',
-  urd: 'Ourdou', ur: 'Ourdou',
-  geo: 'Géorgien', kat: 'Géorgien', ka: 'Géorgien',
-  arm: 'Arménien', hye: 'Arménien', hy: 'Arménien',
-  mac: 'Macédonien', mkd: 'Macédonien', mk: 'Macédonien',
-}
 
-/** Convertit un sous-titre SRT/VTT distant en texte VTT. */
-async function fetchVtt(url: string): Promise<string> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(9000) })
-  if (!res.ok) throw new Error('subtitles fetch failed')
-  const text = await res.text()
-  return text.startsWith('WEBVTT')
-    ? text
-    : 'WEBVTT\n\n' + text.replace(/\r/g, '').replace(/(\d{1,2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
-}
 
 export default function Player({ req, onClose, minimized, onToggleMinimize }: {
   req: PlayRequest
@@ -168,7 +104,6 @@ export default function Player({ req, onClose, minimized, onToggleMinimize }: {
   const [controlsVisible, setControlsVisible] = useState(true)
   const [speed, setSpeed] = useState(1)
   const [subMenu, setSubMenu] = useState(false)
-  const [activeSub, setActiveSub] = useState<string | null>(null)
   // Pistes audio multiples (HLS multi-langues, ou pistes natives exposées
   // par le navigateur) : liste + piste active + menu.
   const [audioTracks, setAudioTracks] = useState<{ id: number; label: string }[]>([])
@@ -177,7 +112,6 @@ export default function Player({ req, onClose, minimized, onToggleMinimize }: {
   const [tcAudioIdx, setTcAudioIdx] = useState(0)
   const [activeAudio, setActiveAudio] = useState(0)
   const [audioMenu, setAudioMenu] = useState(false)
-  const [subError, setSubError] = useState<string | null>(null)
   // --- Gestes mobiles (double-tap ±10 s, balayages volume / luminosité) ---
     // « Passer l'intro » façon Netflix : les sources ne fournissent pas de
   // repère d'intro — raccourci temporel de 90 s pendant le début de l'épisode.
@@ -252,6 +186,12 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
   const debridRetryRef = useRef<string | null>(null)
   const tcDurationRef = useRef(0)
   const tcActiveRef = useRef(false)
+
+  // Sous-titres : pistes, conversion, auto-FR, réglages — hook dédié.
+  const {
+    allSubs, groupedSubs, activeSub, subError, subPrefs, subAuto,
+    pickSubtitle, toggleSubAuto, updateSubPrefs, applySubTrack, activeSubObjRef,
+  } = useSubtitles({ req, videoRef, hlsRef, tcOffsetRef, trackUrlRef })
   const showHud = useCallback((kind: 'seek-left' | 'seek-right' | 'volume' | 'brightness' | 'play' | 'pause' | 'subdelay', value = 0) => {
     setHud({ kind, value, id: Date.now() })
     clearTimeout(hudTimer.current ?? undefined)
@@ -311,27 +251,6 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
   const lastSaved = useRef(0)
   const scrobbledRef = useRef(false)
 
-  // Toutes les pistes de sous-titres disponibles
-  const allSubs: SubtitleTrack[] = [
-    ...(req.stream.subtitles ?? []).filter((t) => !/opensubtitles\.stremio\.homes|api\.opensubtitles\.com/i.test(t?.url ?? '')).map((s, i) => ({
-      id: `emb-${i}`, url: s.url, lang: s.lang, label: s.lang.toUpperCase(), addonName: 'Source',
-    })),
-    ...(req.subtitles ?? []),
-  ]
-
-  // Regroupement par langue (français en tête), noms affichés en clair.
-  const groupedSubs: [string, SubtitleTrack[]][] = (() => {
-    const map = new Map<string, SubtitleTrack[]>()
-    for (const s of allSubs) {
-      const name = SUB_LANG_NAMES[s.lang.toLowerCase()] ?? s.lang.toUpperCase()
-      map.set(name, [...(map.get(name) ?? []), s])
-    }
-    return [...map.entries()].sort(([a], [b]) => {
-      if (a === 'Français') return -1
-      if (b === 'Français') return 1
-      return a.localeCompare(b)
-    })
-  })()
 
   const wakeControls = useCallback(() => {
     setControlsVisible((v) => {
@@ -1676,69 +1595,6 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
     setSpeed(next)
   }
 
-  // Applique la piste courante avec le décalage choisi (rawVttRef = texte
-  // original : changer le décalage régénère la piste sans re-télécharger).
-  const rawVttRef = useRef<string | null>(null)
-  const activeSubObjRef = useRef<SubtitleTrack | null>(null)
-  const [subPrefs, setSubPrefsState] = useState<SubPrefs>(getSubPrefs)
-  useEffect(() => initSubPrefs(), [])
-
-  // Désactive TOUTES les pistes de sous-titres — y compris celles natives
-  // des flux HLS, sinon doublon à l'écran (piste embarquée + piste ajoutée).
-  const disableAllTextTracks = (v: HTMLVideoElement) => {
-    for (const t of Array.from(v.textTracks)) t.mode = 'disabled'
-  }
-
-  // Certaines sources embarquent les mêmes cues 2-3 fois (doublons de blocs).
-  // On supprime les blocs strictement identiques (timing + texte) avant rendu.
-  const dedupeVttBlocks = (vtt: string): string => {
-    const seen = new Set<string>()
-    return vtt
-      .split(/\n\n+/)
-      .filter((b) => {
-        const key = b.replace(/\r/g, '').replace(/\s+/g, ' ').trim()
-        if (!key || seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
-      .join('\n\n')
-  }
-
-  const applySubTrack = (label: string, lang: string) => {
-    const v = videoRef.current
-    const raw = rawVttRef.current
-    if (!v || !raw) return
-    v.querySelectorAll('track[data-nova]').forEach((t) => t.remove())
-    disableAllTextTracks(v)
-    const hls = hlsRef.current
-    if (hls) {
-      hls.subtitleDisplay = false
-      hls.subtitleTrack = -1
-    }
-    if (trackUrlRef.current) URL.revokeObjectURL(trackUrlRef.current)
-    const blobUrl = URL.createObjectURL(new Blob([dedupeVttBlocks(shiftVtt(raw, subPrefs.delay + tcOffsetRef.current))], { type: 'text/vtt' }))
-    trackUrlRef.current = blobUrl
-    const track = document.createElement('track')
-    track.kind = 'subtitles'
-    track.label = label
-    track.srclang = lang
-    track.src = blobUrl
-    track.default = true
-    track.dataset.nova = '1'
-    v.appendChild(track)
-    track.track.mode = 'showing'
-  }
-
-  const subPrefsRef = useRef<SubPrefs>(subPrefs)
-  subPrefsRef.current = subPrefs
-  const updateSubPrefs = (patch: Partial<SubPrefs>) => {
-    const next = setSubPrefs(patch)
-    setSubPrefsState(next)
-    // Décalage modifié → régénère immédiatement la piste active
-    if (patch.delay !== undefined && activeSubObjRef.current) {
-      applySubTrack(activeSubObjRef.current.label, activeSubObjRef.current.lang)
-    }
-  }
 
   // ------------------------------------------------------------- SALON
   // « Regarder ensemble » : hôte = pousse son état, invité = suit l'hôte.
@@ -1876,95 +1732,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
     onClose()
   }
 
-  // Préfixe « os: » = lien OpenSubtitles gzippé (source intégrée) : on
-  // décompresse côté client et on convertit SRT → VTT si besoin.
-  const srtToVttText = (txt: string): string => {
-    if (txt.trimStart().startsWith('WEBVTT')) return txt
-    const body = txt
-      .replace(/\r/g, '')
-      .split('\n')
-      .map((l) => (/^\d{2}:\d{2}:\d{2},\d{3}\s*-->/.test(l) ? l.replace(/,/g, '.') : l))
-      .join('\n')
-    return `WEBVTT\n\n${body}`
-  }
 
-  const fetchVttSub = async (sub: SubtitleTrack): Promise<string> => {
-    if (sub.url.startsWith('osv2:')) {
-      const text = await opensubsDownloadVtt(Number(sub.url.slice(5)))
-      return text.trimStart().startsWith('WEBVTT') ? text : srtToVttText(text)
-    }
-    if (!sub.url.startsWith('os:')) return fetchVtt(sub.url)
-    const res = await fetch(sub.url.slice(3), { signal: AbortSignal.timeout(20000) })
-    if (!res.ok) throw new Error('OpenSubtitles indisponible')
-    const buf = await res.arrayBuffer()
-    let text: string
-    try {
-      text = await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
-    } catch {
-      text = new TextDecoder('utf-8').decode(buf)
-    }
-    return srtToVttText(text)
-  }
-
-  const selectSubtitle = async (sub: SubtitleTrack | null) => {
-    const v = videoRef.current
-    if (!v) return
-    setSubError(null)
-    v.querySelectorAll('track[data-nova]').forEach((t) => t.remove())
-    if (trackUrlRef.current) { URL.revokeObjectURL(trackUrlRef.current); trackUrlRef.current = null }
-    rawVttRef.current = null
-    activeSubObjRef.current = null
-    if (!sub) {
-      const vv = videoRef.current
-      if (vv) disableAllTextTracks(vv)
-      setActiveSub(null)
-      return
-    }
-    try {
-      rawVttRef.current = await fetchVttSub(sub)
-      activeSubObjRef.current = sub
-      applySubTrack(sub.label, sub.lang)
-      setActiveSub(sub.id)
-    } catch {
-      setSubError('Sous-titres inaccessibles (CORS).')
-    }
-  }
-
-  // Sélection manuelle : désactive l'auto-FR pour CETTE lecture.
-  const userTouchedSubsRef = useRef(false)
-  const pickSubtitle = (sub: SubtitleTrack | null) => {
-    userTouchedSubsRef.current = true
-    void selectSubtitle(sub)
-  }
-
-  // Sous-titres FR AUTO : dès qu'une piste française existe, on l'active
-  // sans rien demander (désactivable dans le menu, ou en choisissant une
-  // autre piste soi-même pour cette lecture).
-  const SUB_AUTO_KEY = 'novastream:sub-auto'
-  const [subAuto, setSubAuto] = useState(() => readJSON<boolean>(SUB_AUTO_KEY, true))
-  const autoSubDoneRef = useRef<string | null>(null)
-  useEffect(() => {
-    userTouchedSubsRef.current = false
-    autoSubDoneRef.current = null
-  }, [req.meta.id])
-  useEffect(() => {
-    if (!subAuto || autoSubDoneRef.current === req.meta.id) return
-    if (activeSub || userTouchedSubsRef.current) return
-    const fr = allSubs.find((s) => s.lang.toLowerCase().startsWith('fr'))
-    if (!fr) return
-    autoSubDoneRef.current = req.meta.id
-    const t = setTimeout(() => {
-      if (!userTouchedSubsRef.current) void selectSubtitle(fr)
-    }, 1200)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [req.meta.id, subAuto, activeSub, allSubs.length])
-  const toggleSubAuto = () => {
-    const next = !subAuto
-    setSubAuto(next)
-    writeJSON(SUB_AUTO_KEY, next)
-    if (!next && activeSub && !userTouchedSubsRef.current) void selectSubtitle(null)
-  }
 
   const fmt = (s: number) => {
     if (!isFinite(s)) return '0:00'
