@@ -1022,8 +1022,11 @@ export function ensureServerDebridAddon(): void {
       list.push({ url, manifest, enabled: true, installedAt: Date.now() } as InstalledAddon)
       changed = true
     }
-    if (d.url) add(d.url, d.manifest)
-    if (d.animesub?.url) add(d.animesub.url, d.animesub.manifest)
+    // Les URLs sont stockées SANS le suffixe /manifest.json (convention de
+    // normalizeAddonUrl) — sinon les requêtes /stream/… aboutissent à un 404.
+    const base = (u: string) => u.replace(/\/manifest\.json$/i, '')
+    if (d.url) add(base(d.url), d.manifest)
+    if (d.animesub?.url) add(base(d.animesub.url), d.animesub.manifest)
     if (changed) writeJSON(KEY, list)
   }).catch(() => {})
 }
