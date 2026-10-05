@@ -394,6 +394,9 @@ export default function SettingsPage() {
             DZ STREAM v11 — application de streaming française. Catalogue Cinemeta, enrichissements TMDB,
             sources premium AllDebrid/TorBox via Torrentio et HDHub. Tes données restent sur ton appareil.
           </p>
+          <p className="mt-3 text-[11px] font-mono text-white/40">
+            Build : 2026-10-05 17:23 UTC — correctifs audio/sous-titres inclus
+          </p>
         </section>
       </div>
 
