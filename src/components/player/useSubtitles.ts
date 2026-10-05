@@ -60,6 +60,28 @@ const SUB_LANG_NAMES: Record<string, string> = {
   mac: 'Macédonien', mkd: 'Macédonien', mk: 'Macédonien',
 }
 
+
+/**
+ * Anti-fausse-etiquette : certaines releases taguent « fre » une piste en
+ * realite anglaise. Apres chargement on analyse le TEXTE de la piste :
+ * comptage des mots-outils francais vs anglais (sur un echantillon).
+ * Trop peu de matiere (piste forced, generiques) -> on ne juge pas (true).
+ */
+function looksFrench(vtt: string): boolean {
+  const text = vtt
+    .replace(/WEBVTT[^\n]*/g, " ")
+    .replace(/\d{1,2}:\d{2}:\d{2}[.,]\d{3}\s*-->[^\n]*/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .toLowerCase()
+  const words = text.match(/[a-z\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f6\u00f9\u00fb\u00fc\u00e7\u0027]+/g) ?? []
+  if (words.length < 20) return true
+  const FR = new Set(["le","la","les","des","une","je","tu","il","elle","nous","vous","ils","est","sont","pas","ne","que","qui","dans","sur","avec","pour","mais","est-ce","ca","etre","avoir","fait","faire","tout","tres","bien","oui","non","merci","quoi","cette","ces","mon","ton","son","mes","tes","ses","aux","du","au","quand","parce","ai","as","es","sommes","etes","ont","va","vas","rien","jamais","alors","ici","voila","peux","veux","vais","faut","dit","dis"])
+  const EN = new Set(["the","you","he","she","we","they","is","are","was","were","not","what","who","where","when","why","how","this","that","these","those","my","your","his","her","our","their","and","but","if","because","with","from","into","about","have","has","do","does","did","will","would","can","could","should","don","didn","doesn","isn","aren","it","its","let","gonna","wanna","yeah","okay","hey","oh","uh"])
+  let fr = 0, en = 0
+  for (const w of words.slice(0, 400)) { if (FR.has(w)) fr++; else if (EN.has(w)) en++ }
+  return fr >= en
+}
+
 /** Convertit un sous-titre SRT/VTT distant en texte VTT. */
 async function fetchVtt(url: string): Promise<string> {
   const res = await fetch(url, { signal: AbortSignal.timeout(9000) })
@@ -220,10 +242,30 @@ export function useSubtitles({
       return
     }
     try {
-      rawVttRef.current = await fetchVttSub(sub)
-      activeSubObjRef.current = sub
-      applySubTrack(sub.label, sub.lang)
-      setActiveSub(sub.id)
+      let vtt = await fetchVttSub(sub)
+      let chosen = sub
+      // Piste annoncee FR mais contenu anglais : on tente un vrai repli FR
+      // (OpenSubtitles, langue verifiee cote serveur) avant d afficher.
+      if (sub.lang.toLowerCase().startsWith('fr') && !looksFrench(vtt)) {
+        const fb = allSubs.find((s) =>
+          s.id !== sub.id && s.lang.toLowerCase().startsWith('fr') &&
+          (s.url.startsWith('osv2:') || s.url.startsWith('os:')),
+        )
+        let replaced = false
+        if (fb) {
+          try {
+            const fbVtt = await fetchVttSub(fb)
+            if (looksFrench(fbVtt)) { vtt = fbVtt; chosen = fb; replaced = true }
+          } catch { /* repli indisponible : on garde la piste d origine */ }
+        }
+        setSubError(replaced
+          ? 'La piste FR de la source etait en anglais : remplacee par OpenSubtitles.'
+          : 'Attention : piste etiquettee Francais mais contenu anglais.')
+      }
+      rawVttRef.current = vtt
+      activeSubObjRef.current = chosen
+      applySubTrack(chosen.label, chosen.lang)
+      setActiveSub(chosen.id)
     } catch {
       setSubError('Sous-titres inaccessibles (CORS).')
     }
