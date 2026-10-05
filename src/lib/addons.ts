@@ -1014,10 +1014,16 @@ export async function fetchMetaAny(type: string, id: string): Promise<MetaFull |
 
 export function ensureServerDebridAddon(): void {
   fetch('/api/manga/debrid-addon').then(r => r.ok ? r.json() : null).then((d: any) => {
-    if (!d || !d.url) return
+    if (!d) return
     const list = readJSON<InstalledAddon[]>(KEY, [])
-    if (list.some(a => a.url === d.url)) return
-    list.push({ url: d.url, manifest: d.manifest, enabled: true, installedAt: Date.now() } as InstalledAddon)
-    writeJSON(KEY, list)
+    let changed = false
+    const add = (url: string, manifest: unknown) => {
+      if (!url || !manifest || list.some(a => a.url === url)) return
+      list.push({ url, manifest, enabled: true, installedAt: Date.now() } as InstalledAddon)
+      changed = true
+    }
+    if (d.url) add(d.url, d.manifest)
+    if (d.animesub?.url) add(d.animesub.url, d.animesub.manifest)
+    if (changed) writeJSON(KEY, list)
   }).catch(() => {})
 }

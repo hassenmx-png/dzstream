@@ -164,6 +164,27 @@ mangaApp.get("/proxy-img", async (c) => {
 });
 
 /* ── Détail / bibliothèque / chapitres / pages ────────────── */
+mangaApp.get("/debrid-addon", async (c) => {
+  const out: Record<string, unknown> = { url: null };
+  let cfg: Record<string, string> = {};
+  try {
+    cfg = JSON.parse(await rf("/root/work_v43/data/debrid-addon.json", "utf8"));
+  } catch { return c.json(out); }
+  if (cfg.blob) {
+    try {
+      const r = await fetch(`http://127.0.0.1:4001/${cfg.blob}/manifest.json`);
+      if (r.ok) { out.url = `/jackettio/${cfg.blob}`; out.manifest = await r.json(); }
+    } catch { /* jackettio indisponible : on ignore */ }
+  }
+  if (cfg.animesub) {
+    try {
+      const r2 = await fetch(cfg.animesub);
+      if (r2.ok) out.animesub = { url: cfg.animesub, manifest: await r2.json() };
+    } catch { /* addon anime indisponible : on ignore */ }
+  }
+  return c.json(out);
+});
+
 mangaApp.get("/:id", async (c) => {
   const id = c.req.param("id");
   const d = await md(`/manga/${id}?includes[]=cover_art`);
@@ -247,16 +268,6 @@ mangaApp.get("/chapter/:cid/pages", async (c) => {
       (f: string, i: number) => px(`${baseUrl}/data/${chapter.hash}/${f}`) + `&ch=${cid}&i=${i}`,
     ),
   );
-});
-
-mangaApp.get("/debrid-addon", async (c) => {
-  try {
-    const cfg = JSON.parse(await rf("/root/work_v43/data/debrid-addon.json", "utf8"));
-    if (!cfg.blob) return c.json({ url: null });
-    const r = await fetch(`http://127.0.0.1:4000/${cfg.blob}/manifest.json`);
-    if (!r.ok) return c.json({ url: null });
-    return c.json({ url: `/jackettio/${cfg.blob}`, manifest: await r.json() });
-  } catch { return c.json({ url: null }); }
 });
 
 /* ── Legacy : proxy images Suwayomi (anciennes entrées) ───── */
