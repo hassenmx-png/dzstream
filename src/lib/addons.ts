@@ -709,7 +709,11 @@ export function streamSize(s: Stream): number {
  * - null : pas d'info (le plus souvent VO)
  */
 export function streamAudio(s: Stream): 'VF' | 'MULTI' | 'VOSTFR' | null {
-  const text = `${s.name ?? ''} ${s.title ?? ''} ${s.description ?? ''}`
+  // streamText inclut behaviorHints.filename : Lumio (et d autres) ne mettent
+  // la langue QUE dans le nom de fichier (MULTi.VFF, VF2...) — sans lui, ces
+  // sources etaient classees « langue inconnue » et eliminees par les filtres
+  // FR (AUDIO FR / FR SUR).
+  const text = streamText(s)
   // Preuve EXPLICITE d'une piste audio française dans la release
   if (text.includes('🇫🇷')) return 'VF'
   if (/truefrench|\bfrench\b|\bvff\b|\bvfq\b|\bvf2\b|fran[cç]ais|\bfr[- ]?audio\b|\baudio[- ]?fr\b/i.test(text)) return 'VF'
