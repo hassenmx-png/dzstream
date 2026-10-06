@@ -523,6 +523,10 @@ export function effectiveAddonUrl(addon: InstalledAddon): string {
  *  Inclut les /playback/ de StreamFusion (302 → CDN AllDebrid). */
 export function isDebridStream(s: Stream): boolean {
   if (!!s.url && /\/resolve\/|\/tb\/play|\/playback\/|debrid|alldebrid|real-debrid|torbox/i.test(s.url)) return true
+  // Lumio : ses liens /play/ sont resolus cote serveur via Torbox (cache
+  // premium) — le mot « debrid » n apparait nulle part dans l URL, d ou ce
+  // marquage explicite pour le badge eclair et le tri des colonnes.
+  if (!!s.url && /mylumio\.tv\/play\//i.test(s.url)) return true
   // Badge debrid dans le NOM du stream (format standard Stremio : [AD], [AD+],
   // [RD], [TB], [PM]…) — indispensable pour les addons dont l'URL passe par
   // un proxy/tunnel sans le mot « debrid » dedans (ex : Jackettio).

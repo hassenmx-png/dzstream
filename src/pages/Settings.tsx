@@ -395,7 +395,7 @@ export default function SettingsPage() {
             sources premium AllDebrid/TorBox via Torrentio et HDHub. Tes données restent sur ton appareil.
           </p>
           <p className="mt-3 text-[11px] font-mono text-white/40">
-            Build : 2026-10-05 22:10 UTC — AnimeSub+ et Lumio (Torbox) injectes auto</p>
+            Build : 2026-10-06 11:45 UTC — colonne Lumio remontee en tete</p>
         </section>
       </div>
 
