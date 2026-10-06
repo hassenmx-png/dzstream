@@ -395,7 +395,7 @@ export default function SettingsPage() {
             sources premium AllDebrid/TorBox via Torrentio et HDHub. Tes données restent sur ton appareil.
           </p>
           <p className="mt-3 text-[11px] font-mono text-white/40">
-            Build : 2026-10-06 12:05 UTC — detection FR par nom de fichier (Lumio)</p>
+            Build : 2026-10-06 20:15 UTC — repli auto sous-titres morts (UwU)</p>
         </section>
       </div>
 

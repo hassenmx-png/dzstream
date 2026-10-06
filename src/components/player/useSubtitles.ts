@@ -82,6 +82,17 @@ function looksFrench(vtt: string): boolean {
   return fr >= en
 }
 
+/**
+ * Piste "coquille vide" : UwU renvoie un VTT PLACEBO en HTTP 200 quand le
+ * sous-titre est mort cote serveur ("[Sous-titre indisponible ou expire]",
+ * cue unique a 0:01). La piste se charge sans erreur mais n affiche jamais
+ * rien — d ou ce filtre, qui la fait basculer sur un repli.
+ */
+function isDeadVtt(vtt: string): boolean {
+  if (/indisponible ou expir|unavailable or expired/i.test(vtt)) return true
+  return !/\d{1,2}:\d{2}:\d{2}[.,]\d{3}\s*-->/.test(vtt)
+}
+
 /** Convertit un sous-titre SRT/VTT distant en texte VTT. */
 async function fetchVtt(url: string): Promise<string> {
   const res = await fetch(url, { signal: AbortSignal.timeout(9000) })
@@ -244,6 +255,21 @@ export function useSubtitles({
     try {
       let vtt = await fetchVttSub(sub)
       let chosen = sub
+      // Piste placebo (UwU) : on bascule sur une autre piste de la meme
+      // langue (OpenSubtitles de l app en priorite via os:/osv2:).
+      if (isDeadVtt(vtt)) {
+        const prefix = sub.lang.toLowerCase().slice(0, 2)
+        const fb = allSubs.find((s) => s.id !== sub.id && s.lang.toLowerCase().startsWith(prefix))
+        let ok = false
+        if (fb) {
+          try {
+            const fbVtt = await fetchVttSub(fb)
+            if (!isDeadVtt(fbVtt)) { vtt = fbVtt; chosen = fb; ok = true }
+          } catch { /* repli indisponible */ }
+        }
+        if (!ok) throw new Error("dead-sub")
+        setSubError("La piste choisie etait morte cote fournisseur : remplacee automatiquement.")
+      }
       // Piste annoncee FR mais contenu anglais : on tente un vrai repli FR
       // (OpenSubtitles, langue verifiee cote serveur) avant d afficher.
       if (sub.lang.toLowerCase().startsWith('fr') && !looksFrench(vtt)) {
@@ -266,8 +292,10 @@ export function useSubtitles({
       activeSubObjRef.current = chosen
       applySubTrack(chosen.label, chosen.lang)
       setActiveSub(chosen.id)
-    } catch {
-      setSubError('Sous-titres inaccessibles (CORS).')
+    } catch (e) {
+      setSubError(e instanceof Error && e.message === "dead-sub"
+        ? "Cette piste est morte cote fournisseur — essaie une autre piste."
+        : "Sous-titres inaccessibles (reseau ou CORS).")
     }
   }
 
