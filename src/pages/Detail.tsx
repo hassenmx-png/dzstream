@@ -6,9 +6,9 @@ import {
 import type { Episode, MediaType, MetaFull, MetaPreview, Stream, SubtitleTrack } from '@/types'
 import { fetchCatalog, GENRE_FR } from '@/lib/cinemeta'
 import {
-  fetchAllStreams, fetchAllSubtitles, fetchMetaAny, formatBytes, getDebrid, hasRiskyAudio, isDebridDown, isDebridStream, streamAudio, streamKind, streamQuality, streamSeeders, streamSize, watchabilityScore, getAddons, cachedStreams, cacheStreams,
+  fetchAllStreams, fetchAllSubtitles, fetchMetaAny, getDebrid, hasRiskyAudio, isDebridDown, isDebridStream, streamAudio, streamKind, streamQuality, streamSeeders, watchabilityScore, getAddons, cachedStreams, cacheStreams,
 } from '@/lib/addons'
-import { episodeStreamId, makeStreamLabel, useLibrary, useProgress } from '@/lib/library'
+import { episodeStreamId, useLibrary, useProgress } from '@/lib/library'
 import { setRating, useRatings } from '@/lib/ratings'
 import { fetchMetaFr } from '@/lib/tmdbfr'
 import { fetchExtras, fetchRecs, fetchRatings, type AggRatings, type TmdbExtras } from '@/lib/tmdbApi'
@@ -18,20 +18,6 @@ import { readJSON, writeJSON } from '@/lib/store'
 import { toast } from '@/lib/toast'
 import SourceColumns from '@/components/SourceColumns'
 import Row from '@/components/Row'
-
-function QualityBadge({ q }: { q: string }) {
-  const colors: Record<string, string> = {
-    '4K': 'border-[rgb(var(--acc))] text-[rgb(var(--acc))]',
-    '8K': 'border-[rgb(var(--acc))] text-[rgb(var(--acc))]',
-    '1080P': 'border-sky-400/60 text-sky-300',
-    '720P': 'border-white/25 text-white/70',
-  }
-  return (
-    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-mono font-semibold ${colors[q] ?? 'border-white/15 text-white/50'}`}>
-      {q}
-    </span>
-  )
-}
 
 /** Sélecteur de saison façon Netflix : bouton panneau, pas de <select> natif. */
 function SeasonPicker({

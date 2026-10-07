@@ -4,6 +4,9 @@ import { Readable } from "node:stream";
 import type WebTorrent from "webtorrent";
 
 type Torrent = import("webtorrent").Torrent;
+
+// Fourni au runtime par le banner ESM d esbuild (l importer ferait doublon).
+declare const createRequire: typeof import("node:module").createRequire;
 type WTClient = InstanceType<typeof WebTorrent>;
 
 /**
@@ -707,7 +710,7 @@ function encodeToken(u: string, t?: number): string {
 }
 
 /** Déchiffre + authentifie le token. Null si falsifié ou corrompu. */
-function decodeToken(token: string): { u?: string; e?: number } | null {
+function decodeToken(token: string): { u?: string; e?: number; t?: number } | null {
   try {
     const raw = Buffer.from(token, "base64url");
     if (raw.length < 29) return null;

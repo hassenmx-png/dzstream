@@ -167,7 +167,7 @@ const [sleepMin, setSleepMin] = useState<number | null>(null)
     setSleepMin((m) => (m === null ? 30 : m >= 90 ? null : m + 30))
   }
 
-const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | 'brightness' | 'play' | 'pause'; value: number; id: number } | null>(null)
+const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | 'brightness' | 'play' | 'pause' | 'subdelay'; value: number; id: number } | null>(null)
   const hudTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const brightnessRef = useRef(readJSON<number>('novastream:brightness', 1))
   const [brightness, setBrightness] = useState(brightnessRef.current)
@@ -1881,7 +1881,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
             // Debrid ») : on retente la MÊME source après 50 s — le torrent
             // sera prêt — au lieu de sauter directement.
             if (isDebridStream(req.stream) && debridRetryRef.current !== req.stream.url) {
-              debridRetryRef.current = req.stream.url
+              debridRetryRef.current = req.stream.url ?? null
               toast('⏳ Mise en cache Debrid en cours — nouvelle tentative automatique dans 50 s…')
               setTimeout(() => {
                 debridRetryRef.current = null

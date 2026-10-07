@@ -168,6 +168,7 @@ export const RECOMMENDED_ADDONS: RecommendedAddon[] = [
     url: 'https://addon-stremio-fs-public.stremio-fs-public.workers.dev/',
     name: 'Catalogues FR',
     desc: 'Rangées de catalogues français : derniers films, action, séries Netflix/AppleTV/Prime/Disney+.',
+    tags: ['Catalogues', 'FR'],
   },
   {
     url: 'https://v3-cinemeta.strem.io',
@@ -179,6 +180,7 @@ export const RECOMMENDED_ADDONS: RecommendedAddon[] = [
     url: 'https://jackettio.elfhosted.com/',
     name: 'Comet VPS',
     desc: 'Indexeurs publics (EZTV, 1337x, TPB…) résolus en AllDebrid.',
+    tags: ['Sources'],
   },
   {
     url: `${window.location.origin}/jackettio/`,
@@ -564,7 +566,6 @@ export async function fetchAllStreams(type: string, id: string, onPartial?: (add
           .filter((s) => !/failed_access/i.test(s.url ?? '') && !/invalid .*(key|token|apkey)|\berror\b/i.test(`${s.name ?? ''} ${s.title ?? ''}`))
           .map((s) => {
             const u = typeof s.url === 'string' ? s.url : ''
-            const risky = /(ac3|e-?ac3|dts|truehd|atmos)/i.test(`${s.name ?? ''} ${s.title ?? s.description ?? ''}`)
             return {
               ...s,
               url: u,
@@ -1025,7 +1026,7 @@ export function ensureServerDebridAddon(): void {
     if (!d) return
     const list = readJSON<InstalledAddon[]>(KEY, [])
     let changed = false
-    const add = (url: string, manifest: unknown) => {
+    const add = (url: string, manifest: AddonManifest) => {
       if (!url || !manifest) return
       const mid = (manifest as { id?: string }).id
       // Meme addon deja present (meme id de manifest) mais avec une ANCIENNE

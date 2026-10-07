@@ -216,7 +216,6 @@ function DetailView({ manga, onRead }: { manga: Manga; onRead: (chapters: Chapte
   const inLib = info?.inLibrary ?? manga.inLibrary ?? false
 
   // Groupage par tome pour l'affichage
-  const rows: { type: 'volume'; label: string } | { type: 'chapter'; chapter: Chapter; index: number } = [] as any
   const listRows: any[] = []
   if (chapters) {
     let lastVol: string | null = null

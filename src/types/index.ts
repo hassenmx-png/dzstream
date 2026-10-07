@@ -18,6 +18,8 @@ export interface MetaPreview {
   // Page personne : personnage joué / fonction + popularité TMDB
   role?: string
   popularity?: number
+  // Bande-annonce (Hero)
+  trailerStreams?: { title: string; ytId: string }[]
 }
 
 export interface Episode {
@@ -41,7 +43,6 @@ export interface MetaFull extends MetaPreview {
   country?: string
   awards?: string
   videos?: Episode[]
-  trailerStreams?: { title: string; ytId: string }[]
 }
 
 export interface CatalogResponse {

@@ -3,6 +3,7 @@
  *  Tout est encapsulé en try/catch : une panne push ne doit JAMAIS
  *  empêcher le boot du serveur. */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+// @ts-expect-error — web-push ne publie pas de types
 import webpush from 'web-push'
 
 const VAPID_PUBLIC = 'BCHhT2bUOrQgpFrnjNMQ3dFUavJ5FxadNabBgp7D6oNIEaj_BYioTlwN_Obl3ac8ZDkUDvZTc-svyC4IyPj1JSg'

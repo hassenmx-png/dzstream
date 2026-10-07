@@ -25,6 +25,7 @@ export function InstallPrompt() {
 
   useEffect(() => {
     if (isStandalone()) return
+    setIos(isIos())
     try {
       const t = Number(localStorage.getItem(DISMISS_KEY))
       if (t && Date.now() - t < 14 * 24 * 60 * 60 * 1000) return
