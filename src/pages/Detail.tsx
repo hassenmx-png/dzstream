@@ -384,6 +384,41 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
   // Progression existante pour reprendre
   const existing = progressItems.find((p) => p.id === currentStreamId || (type === 'movie' && p.baseId === id))
 
+  // Anti-fausse-VF : le titre d une release peut mentir. On sonde le fichier
+  // (ffprobe via /api/stream/tc-info, cache serveur 10 min) sur les premieres
+  // sources « VF/MULTI » en lien direct ; sans piste FR reelle -> badge retire.
+  const verifyFrenchAudio = (list: Stream[]) => {
+    const FR = new Set(['fr', 'fre', 'fra', 'fr-ca', 'fr-ca'])
+    let probing = 0
+    const markLied = (s: Stream) => {
+      ;(s as { audioLied?: boolean }).audioLied = true
+      setStreams((prev) => (prev ? [...prev] : prev))
+    }
+    for (const s of list) {
+      if (probing >= 4) break
+      const a = streamAudio(s)
+      if (a !== 'VF' && a !== 'MULTI') continue
+      const u = s.url ?? ''
+      if (!u.startsWith('http')) continue // torrents P2P : non sondables
+      const key = 'novastream:vfprobe:' + u
+      let cached: string[] | null = null
+      try { cached = JSON.parse(sessionStorage.getItem(key) ?? 'null') } catch { /* ignore */ }
+      if (cached) {
+        if (!cached.some((l) => FR.has((l ?? '').toLowerCase()))) markLied(s)
+        continue
+      }
+      probing++
+      void fetch(`/api/stream/tc-info?url=${encodeURIComponent(u)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { audioLangs?: string[] } | null) => {
+          const langs = j?.audioLangs ?? null
+          try { sessionStorage.setItem(key, JSON.stringify(langs)) } catch { /* quota */ }
+          if (langs && !langs.some((l) => FR.has((l ?? '').toLowerCase()))) markLied(s)
+        })
+        .catch(() => { /* sonde indisponible : on garde le badge */ })
+    }
+  }
+
   const loadStreams = async (): Promise<Stream[]> => {
     setStreamsLoading(true)
     // Cache session : les sources de CET épisode/film chargées il y a moins
@@ -446,6 +481,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
       }
     } catch {}
     setStreams(all)
+    verifyFrenchAudio(all)
     setStreamsLoading(false)
     cacheStreams(type, currentStreamId, all)
     if (all.length === 0) toast('Aucune source trouvée pour ce contenu')
@@ -683,7 +719,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
     }
     if (audioFilter === 'fr' && !(streamAudio(s) === 'VF' || streamAudio(s) === 'MULTI')) return false
     if (audioFilter === 'vostfr' && streamAudio(s) !== 'VOSTFR') return false
-    if (frOnly && streamAudio(s) === null && !isDebridStream(s)) return false
+    if (frOnly && streamAudio(s) === null && (!isDebridStream(s) || (s as { audioLied?: boolean }).audioLied)) return false
     return true
   })
 

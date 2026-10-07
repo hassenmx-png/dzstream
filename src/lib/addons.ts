@@ -710,6 +710,9 @@ export function streamSize(s: Stream): number {
  * - null : pas d'info (le plus souvent VO)
  */
 export function streamAudio(s: Stream): 'VF' | 'MULTI' | 'VOSTFR' | null {
+  // Badge demasque par la sonde ffprobe (titre mensonger : aucune piste FR
+  // dans le fichier) — la source redevient « langue inconnue » partout.
+  if ((s as { audioLied?: boolean }).audioLied) return null
   // streamText inclut behaviorHints.filename : Lumio (et d autres) ne mettent
   // la langue QUE dans le nom de fichier (MULTi.VFF, VF2...) — sans lui, ces
   // sources etaient classees « langue inconnue » et eliminees par les filtres
