@@ -3,6 +3,7 @@ import Hls from 'hls.js'
 import {
   X, Play, Pause, Volume2, VolumeX, Maximize, Users, ArrowDownToLine,
   PictureInPicture2, Captions, Gauge, Moon, SkipBack, SkipForward, Rewind, FastForward, Cloud, Cast, Airplay,
+  MonitorSmartphone,
   Minimize2, Maximize2, Expand, Shrink, Languages,
 } from 'lucide-react'
 import type { PlayRequest } from '@/lib/nav'
@@ -36,6 +37,10 @@ const P2P_FAILS_KEY = 'novastream:p2p-fails'
 const p2pFails = () => readJSON<number>(P2P_FAILS_KEY, 0)
 const noteP2PFail = () => writeJSON(P2P_FAILS_KEY, p2pFails() + 1)
 const noteP2POk = () => { if (p2pFails() !== 0) writeJSON(P2P_FAILS_KEY, 0) }
+
+/** Vrai dans la coque Android Capacitor (bridge injecté par la WebView native). */
+const isNativeApp = (): boolean =>
+  !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 
 /** Évite de répéter le toast « clé debrid refusée » à chaque source essayée. */
 let debridWarned = false
@@ -548,6 +553,31 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
    * réelle → piste AC3/DTS non déclarée → source suivante, ou transcodage
    * serveur en dernier recours. Chrome/Android/Safari uniquement.
    */
+  /**
+   * Coque Android : délègue la lecture à ExoPlayer natif (plugin
+   * CapacitorVideoPlayer), qui décode ce que la WebView refuse (HEVC, MKV,
+   * AC3/DTS). La vidéo web est mise en pause dessous.
+   * ponytail: pas de reprise à la position courante (le plugin ne l accepte pas).
+   */
+  const openNativePlayer = useCallback((): boolean => {
+    if (!isNativeApp()) return false
+    const plugin = (window as unknown as { Capacitor?: { Plugins?: Record<string, { initPlayer?: (o: Record<string, unknown>) => Promise<unknown> }> } }).Capacitor?.Plugins?.CapacitorVideoPlayer
+    const raw = tcFinalUrlRef.current || req.stream.url || ''
+    if (!plugin?.initPlayer || !/^https?:/i.test(raw)) return false
+    videoRef.current?.pause()
+    const subUrl = activeSubObjRef.current?.url
+    const opts: Record<string, unknown> = {
+      mode: 'fullscreen', url: raw, playerId: 'dzstream', componentTag: 'div',
+      title: req.meta?.name ?? '', accentColor: '#42b883', exitOnEnd: true,
+    }
+    if (subUrl && /^https?:/i.test(subUrl)) {
+      opts.subtitle = subUrl
+      opts.language = activeSubObjRef.current?.lang ?? 'fr'
+    }
+    void plugin.initPlayer(opts).catch(() => toast('Lecture native indisponible'))
+    return true
+  }, [req])
+
   const runByteCountDetector = useCallback(() => {
     const v = videoRef.current
     if (!v || audioCheckedRef.current) return
@@ -562,6 +592,8 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
       if (v.muted) return
       const d1 = probe.webkitAudioDecodedByteCount
       if (d1 != null && d1 - d0 < 64) {
+        // ExoPlayer natif décode AC3/DTS : exit le transcodage serveur.
+        if (openNativePlayer()) return
         toast('Piste audio incompatible (AC3/DTS) → essai de la source suivante…')
         if (!tryNextSourceRef.current()) {
           // AUCUNE autre source : transcodage audio de CELLE-CI plutôt qu'un
@@ -1875,6 +1907,9 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
             if (!tryNextSource()) setError('La conversion audio a échoué et aucune autre source n\'a répondu.')
             return
           }
+          // Codec refusé par la WebView (HEVC, MKV…) : ExoPlayer les lit tous.
+          const ve = (e.currentTarget as HTMLVideoElement).error
+          if (ve && (ve.code === 3 || (ve.code === 4 && /\.mkv(\?|$)/i.test(req.stream.url ?? ''))) && openNativePlayer()) return
           if (kind === 'http' && !proxied) setProxied(true)
           else if (kind === 'http') {
             // Source débridée non encore cachée (message « downloaded to
@@ -2293,6 +2328,16 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
             <button onClick={pip} className="p-1.5 text-white/70 hover:text-white">
               <PictureInPicture2 size={19} />
             </button>
+            {isNativeApp() && (
+              <button
+                onClick={(e) => { e.stopPropagation(); openNativePlayer() }}
+                className="p-1.5 text-[rgb(var(--acc))] hover:text-white"
+                aria-label="Lecture native ExoPlayer (tous codecs)"
+                title="Lecture native (tous codecs)"
+              >
+                <MonitorSmartphone size={19} />
+              </button>
+            )}
             <button
               onClick={() => setZoom((z) => { const n = !z; writeJSON('novastream:zoom', n); return n })}
               className={`p-1.5 transition-colors ${zoom ? 'text-[rgb(var(--acc2))]' : 'text-white/80 hover:text-[rgb(var(--acc))]'}`}
