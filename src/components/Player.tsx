@@ -786,6 +786,18 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
                 if (!tryNextSourceRef.current()) setError("Cette source ne repond pas apres 20 s. Essaie une autre source ci-dessous.")
               }
             }, 90000)
+            // iOS : Safari reste parfois noir face a un MKV SANS lever
+            // d erreur. Si rien n est decode apres 15 s, remux fMP4 direct.
+            if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+              setTimeout(() => {
+                const vv = videoRef.current
+                if (!vv || tcActiveRef.current) return
+                if (vv.readyState >= 2 || vv.currentTime > 0.5) return
+                if (!tcFinalUrlRef.current) return
+                toast('Format illisible sur iPhone → conversion MP4 en direct…')
+                void startTranscode(0)
+              }, 15000)
+            }
             // Détecteur anti film-muet cross-origin (compteur d'octets audio
             // décodés) : actif pour TOUTE lecture directe, pas seulement le
             // proxy. Un film ne doit JAMAIS rester muet sans réaction.
@@ -1922,7 +1934,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
           if (ve && (ve.code === 3 || (ve.code === 4 && /\.mkv(\?|$)/i.test(req.stream.url ?? ''))) && openNativePlayer()) return
           // iOS : conteneur illisible non repéré au nom (MKV sans extension) →
           // repli sur le remux fMP4 serveur au lieu d un écran noir.
-          if (ve?.code === 4 && /iphone|ipad|ipod/i.test(navigator.userAgent) && tcFinalUrlRef.current && !tcActiveRef.current) {
+          if ((ve?.code === 3 || ve?.code === 4) && /iphone|ipad|ipod/i.test(navigator.userAgent) && tcFinalUrlRef.current && !tcActiveRef.current) {
             void startTranscode(0)
             return
           }
