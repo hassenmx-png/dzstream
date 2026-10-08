@@ -624,6 +624,16 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
           // transiter le flux par notre proxy ferait flagger le compte. Le
           // navigateur de l'utilisateur a une IP résidentielle = usage normal.
           let playUrl = req.stream.url
+          // iOS/WebKit ne démuxe PAS le MKV (écran noir, son parfois seul) :
+          // on route d'office par le transcodage serveur, qui ré-emballe en
+          // fMP4 — vidéo copiée bit à bit, seul l'audio est ré-encodé AAC.
+          if (/iphone|ipad|ipod/i.test(navigator.userAgent) && /\.mkv(\W|$)/i.test(streamText(req.stream))) {
+            toast('Source MKV → conversion MP4 en direct pour iPhone…')
+            tcFinalUrlRef.current = playUrl
+            tcDurationRef.current = 0
+            await startTranscode(req.startAt ?? 0)
+            return
+          }
           if (isDebridStream(req.stream)) {
             // Pré-résolution côté serveur SANS toucher au CDN (redirection
             // manuelle : une requête à Torrentio, lecture du Location, stop).
@@ -1910,6 +1920,12 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
           // Codec refusé par la WebView (HEVC, MKV…) : ExoPlayer les lit tous.
           const ve = (e.currentTarget as HTMLVideoElement).error
           if (ve && (ve.code === 3 || (ve.code === 4 && /\.mkv(\?|$)/i.test(req.stream.url ?? ''))) && openNativePlayer()) return
+          // iOS : conteneur illisible non repéré au nom (MKV sans extension) →
+          // repli sur le remux fMP4 serveur au lieu d un écran noir.
+          if (ve?.code === 4 && /iphone|ipad|ipod/i.test(navigator.userAgent) && tcFinalUrlRef.current && !tcActiveRef.current) {
+            void startTranscode(0)
+            return
+          }
           if (kind === 'http' && !proxied) setProxied(true)
           else if (kind === 'http') {
             // Source débridée non encore cachée (message « downloaded to
