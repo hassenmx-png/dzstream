@@ -245,6 +245,35 @@
 }
 
 .vegeta-enter { animation: vegeta-enter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* Aura ki (DBZ) : halo bleu qui pulse derrière Vegeta, synchronisé sur
+     la fin de son entrée (0,85 s). */
+  @keyframes ki-pulse {
+    from { transform: translate(-50%, -50%) scale(0.9); opacity: 0.45; }
+    to   { transform: translate(-50%, -50%) scale(1.15); opacity: 0.9; }
+  }
+  .ki-aura {
+    position: absolute;
+    left: 50%; top: 55%;
+    width: 150%; aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(59,130,246,0.12) 45%, transparent 70%);
+    filter: blur(6px);
+    animation: ki-pulse 1.2s ease-in-out 0.85s infinite alternate both;
+    z-index: -1;
+  }
+  /* Flash d'impact unique à l'atterrissage de Vegeta */
+  @keyframes splash-flash {
+    0% { opacity: 0; }
+    18% { opacity: 0.22; }
+    100% { opacity: 0; }
+  }
+  .splash-flash {
+    position: absolute; inset: 0;
+    background: radial-gradient(60% 50% at 50% 45%, rgba(191,219,254,0.9), rgba(59,130,246,0.25) 60%, transparent 100%);
+    animation: splash-flash 0.45s ease-out 0.47s both;
+    pointer-events: none;
+  }
   .vegeta-float { animation: vegeta-float 1.6s ease-in-out 0.85s infinite alternate both; }
   .rise-in { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
 

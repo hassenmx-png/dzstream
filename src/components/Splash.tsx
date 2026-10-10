@@ -44,6 +44,8 @@ export default function Splash({ onDone }: { onDone: () => void }) {
       {/* Vegeta fonce dans l'ecran a l'ouverture : ancre par la gauche
           du centre, derriere les textes (z-0 + ordre DOM) */}
       <div className="vegeta-wrap" aria-hidden>
+        {/* Aura ki : pulsation bleue derrière Vegeta une fois arrivé */}
+        {vgReady && <div className="ki-aura" />}
         <img
           src="/vegeta.webp"
           alt=""
@@ -54,6 +56,8 @@ export default function Splash({ onDone }: { onDone: () => void }) {
           onAnimationEnd={(e) => e.currentTarget.classList.add('vegeta-float')}
         />
       </div>
+      {/* Flash d'impact au moment où Vegeta atterrit (55% de 0,85 s ≈ 470 ms) */}
+      {vgReady && <div className="splash-flash" aria-hidden />}
       <p
         className="bracket-label rise-in relative mb-5 text-white/60"
         style={{ animationDelay: '100ms' }}
