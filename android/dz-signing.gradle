@@ -1,7 +1,7 @@
 android {
     signingConfigs {
         dzDebug {
-            storeFile file('keystore/dzstream-debug.jks')
+            storeFile rootProject.file('keystore/dzstream-debug.jks')
             storePassword 'dzstream2026'
             keyAlias 'dzstream'
             keyPassword 'dzstream2026'
