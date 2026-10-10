@@ -804,6 +804,12 @@ async function handlePlay(c: any) {
     }
     if (!headers.has("Accept-Ranges")) headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", "no-cache");
+    // Si le client ferme la lecture (zapping, fermeture du player), on annule
+    // le téléchargement amont : sinon undici pompait TOUT le fichier à fond
+    // dans le vide après chaque fermeture (saturation VPS constatée en test).
+    c.req.raw.signal.addEventListener("abort", () => {
+      upstream.body?.cancel().catch(() => { /* déjà fermé */ });
+    });
     return new Response(upstream.body, { status: upstream.status, headers });
   } catch {
     return c.json({ error: "flux indisponible" }, 502);
