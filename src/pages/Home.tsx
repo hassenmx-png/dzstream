@@ -128,7 +128,7 @@ function ContinueRow() {
               <div className="mt-2 flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{p.name}</p>
-                  <p className="text-[11px] font-mono text-white/40">
+                  <p className="text-[11px] font-mono text-white/60">
                     Reprendre à <span className="text-[rgb(var(--acc))]/90">{fmtClock(p.time)}</span>
                     {' · '}
                     <span className="text-[rgb(var(--acc))]/80">{Math.round(pct)}%</span>
@@ -164,7 +164,7 @@ function AddonRow({ addon, type, id, name }: { addon: InstalledAddon; type: stri
     return (
       <section className="cv-auto px-5 md:px-12">
         <h2 className="row-title">{addon.manifest.name} — {name}</h2>
-        <p className="mt-2 flex items-center gap-3 text-sm text-white/40">
+        <p className="mt-2 flex items-center gap-3 text-sm text-white/60">
           Échec du chargement.
           <button onClick={() => setRetryKey((k) => k + 1)} className="text-[rgb(var(--acc))] underline hover:text-white">Réessayer</button>
         </p>
@@ -514,7 +514,7 @@ export default function Home() {
         {failed.map((f) => {
           const job = [{ key: 'movies', label: 'Films' }, { key: 'series', label: 'Séries' }].find((j) => j.key === f)
           return (
-            <p key={f} className="px-5 md:px-12 text-white/40 text-sm flex items-center gap-3">
+            <p key={f} className="px-5 md:px-12 text-white/60 text-sm flex items-center gap-3">
               Impossible de charger « {job?.label ?? f} ».
               <button onClick={() => setReloadKey((k) => k + 1)} className="text-[rgb(var(--acc))] underline hover:text-white">
                 Réessayer

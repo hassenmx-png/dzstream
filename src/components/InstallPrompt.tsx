@@ -74,7 +74,7 @@ export function InstallPrompt() {
             </p>
           )}
         </div>
-        <button onClick={dismiss} className="p-1 text-white/40 hover:text-white" aria-label="Fermer">
+        <button onClick={dismiss} className="p-1 text-white/60 hover:text-white" aria-label="Fermer">
           <X size={16} />
         </button>
       </div>

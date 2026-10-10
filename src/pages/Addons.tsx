@@ -253,7 +253,7 @@ export default function AddonsPage() {
                       <p className="text-sm font-bold">
                         {debrid.service === 'torbox' ? `Plan ${TB_PLANS[premium.plan ?? 0] ?? premium.plan}` : 'Premium actif'}
                       </p>
-                      {premium.username && <p className="text-[11px] text-white/40 font-mono">{premium.username}</p>}
+                      {premium.username && <p className="text-[11px] text-white/60 font-mono">{premium.username}</p>}
                     </div>
                   </div>
                   {premium.daysLeft !== null && premium.daysLeft !== undefined && (
@@ -261,7 +261,7 @@ export default function AddonsPage() {
                       <p className={`font-display text-2xl font-black ${premium.daysLeft <= 2 ? 'text-red-400' : premium.daysLeft <= 7 ? 'text-amber-300' : 'text-[rgb(var(--acc))]'}`}>
                         {premium.daysLeft} j
                       </p>
-                      <p className="text-[10px] font-mono-label text-white/40">RESTANTS</p>
+                      <p className="text-[10px] font-mono-label text-white/60">RESTANTS</p>
                     </div>
                   )}
                 </div>
@@ -514,7 +514,7 @@ export default function AddonsPage() {
         {addons.length === 0 && (
           <div className="rounded-md border border-dashed border-white/15 p-10 text-center">
             <Layers size={28} className="mx-auto mb-3 text-white/25" />
-            <p className="text-white/40 text-sm">Aucun addon installé pour l'instant.</p>
+            <p className="text-white/60 text-sm">Aucun addon installé pour l'instant.</p>
             <p className="mt-1 text-white/25 text-xs font-mono">
               Les métadonnées (affiches, synopsis) fonctionnent déjà sans addon.
             </p>
@@ -540,7 +540,7 @@ export default function AddonsPage() {
                 <span className="text-[10px] font-mono text-white/30">v{a.manifest.version}</span>
               </p>
               {a.manifest.description && (
-                <p className="mt-0.5 line-clamp-1 text-xs text-white/40">{a.manifest.description}</p>
+                <p className="mt-0.5 line-clamp-1 text-xs text-white/60">{a.manifest.description}</p>
               )}
               <p className="mt-1 flex flex-wrap gap-1.5">
                 {a.manifest?.resources?.map((r, i) => (
@@ -570,7 +570,7 @@ export default function AddonsPage() {
         ))}
       </div>
 
-      <div className="mt-12 rounded-md border border-white/8 bg-white/[0.02] p-5 text-xs text-white/40 leading-relaxed space-y-2">
+      <div className="mt-12 rounded-md border border-white/8 bg-white/[0.02] p-5 text-xs text-white/60 leading-relaxed space-y-2">
         <p className="bracket-label !text-[10px]">Bon à savoir</p>
         <p>— N'importe quel addon respectant le protocole Stremio (manifest.json) est compatible.</p>
         <p>— Les flux HTTP/HLS se lisent directement. Les torrents passent par WebTorrent (P2P WebRTC dans le navigateur) : seuls les pairs compatibles WebRTC sont joignables.</p>

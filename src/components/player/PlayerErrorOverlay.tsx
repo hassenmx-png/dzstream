@@ -18,7 +18,7 @@ export default function PlayerErrorOverlay({
       <div className="max-w-md text-center space-y-4">
         <AlertTriangle size={36} className="mx-auto text-amber-400" />
         <p className="text-white/85">{error}</p>
-        <p className="text-white/40 text-sm">
+        <p className="text-white/60 text-sm">
           Astuce : privilégie les sources avec le plus de seeders (👤), ou les liens Direct / HLS.
         </p>
         <button onClick={onClose} className="rounded-sm bg-[rgb(var(--acc))] px-6 py-2.5 text-sm font-bold text-white">
@@ -27,7 +27,7 @@ export default function PlayerErrorOverlay({
         {showP2PFallback && (
           <button
             onClick={onP2PFallback}
-            className="block mx-auto text-xs text-white/40 hover:text-[rgb(var(--acc))] underline underline-offset-4"
+            className="block mx-auto text-xs text-white/60 hover:text-[rgb(var(--acc))] underline underline-offset-4"
           >
             ou tenter en P2P navigateur (WebRTC)
           </button>

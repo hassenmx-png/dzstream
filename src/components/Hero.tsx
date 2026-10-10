@@ -5,6 +5,7 @@ import { useNav } from '@/lib/nav'
 import { useLibrary } from '@/lib/library'
 import { GENRE_FR } from '@/lib/cinemeta'
 import { fetchExtras } from '@/lib/tmdbApi'
+import { fetchMetaFr } from '@/lib/tmdbfr'
 
 export default function Hero({ items }: { items: MetaPreview[] }) {
   const { go } = useNav()
@@ -16,6 +17,7 @@ export default function Hero({ items }: { items: MetaPreview[] }) {
   // Son coupé par défaut (politique d'autoplay) ; un bouton permet de l'activer.
   const [trailerYt, setTrailerYt] = useState<string | null>(null)
   const [soundOn, setSoundOn] = useState(false)
+  const [descFr, setDescFr] = useState<string | null>(null)
   // Tick de replanification (pause : on reporte au lieu de sauter)
   const [tick, setTick] = useState(0)
 
@@ -43,8 +45,13 @@ export default function Hero({ items }: { items: MetaPreview[] }) {
 
   useEffect(() => {
     setTrailerYt(null)
+    setDescFr(null)
     if (!m || !/^tt\d+/.test(m.id)) return
     let cancelled = false
+    // Synopsis FR tout de suite (la BA attend 3,5 s plus bas)
+    fetchMetaFr(m.type, m.id)
+      .then((fr) => { if (!cancelled && fr?.description) setDescFr(fr.description) })
+      .catch(() => { /* garde le synopsis EN */ })
     const t = setTimeout(() => {
       // Repli : si l'API serveur échoue (déploiement statique), on retombe
       // sur trailerStreams fourni par Cinemeta — la BA se charge quand même.
@@ -155,9 +162,9 @@ export default function Hero({ items }: { items: MetaPreview[] }) {
             </span>
           ))}
         </div>
-        {m.description && (
+        {(descFr || m.description) && (
           <p className="mt-4 line-clamp-3 text-sm md:text-base text-white/70 max-w-xl rise-in" style={{ animationDelay: '140ms' }}>
-            {m.description}
+            {descFr || m.description}
           </p>
         )}
         <div className="mt-7 flex flex-wrap items-center gap-2.5 md:gap-3 rise-in" style={{ animationDelay: '200ms' }}>

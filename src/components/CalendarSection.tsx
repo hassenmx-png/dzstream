@@ -77,7 +77,7 @@ export default function CalendarSection({
                   >
                     {dist.label}
                   </span>
-                  <span className="text-xs capitalize text-white/40">{dateLabel}</span>
+                  <span className="text-xs capitalize text-white/60">{dateLabel}</span>
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-1 snap-row">
                   {list.map((e) => (
@@ -103,7 +103,7 @@ export default function CalendarSection({
                         <span className="mt-0.5 block text-[11px] font-mono text-[rgb(var(--acc))]/80">
                           S{String(e.season).padStart(2, '0')}E{String(e.episode).padStart(2, '0')}
                         </span>
-                        <span className="block truncate text-[11px] text-white/40">{e.title}</span>
+                        <span className="block truncate text-[11px] text-white/60">{e.title}</span>
                       </span>
                     </button>
                   ))}

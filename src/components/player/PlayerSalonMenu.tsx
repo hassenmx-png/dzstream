@@ -26,7 +26,7 @@ export default function PlayerSalonMenu({
 }) {
   return (
   <div className="absolute bottom-10 right-0 w-72 rounded-md border border-white/10 bg-[#0a0a0a]/95 backdrop-blur p-3 space-y-2.5">
-    <p className="text-[10px] font-mono tracking-[0.2em] text-white/40">SALON — REGARDER ENSEMBLE</p>
+    <p className="text-[10px] font-mono tracking-[0.2em] text-white/60">SALON — REGARDER ENSEMBLE</p>
     {!room ? (
       <>
         <button
@@ -36,11 +36,11 @@ export default function PlayerSalonMenu({
         >
           {salonBusy ? 'Création…' : 'Créer un salon'}
         </button>
-        <p className="text-[11px] text-white/40 leading-relaxed">
+        <p className="text-[11px] text-white/60 leading-relaxed">
           Tes amis ouvrent le lecteur, touchent cette icône et entrent le code : lecture, pause et position synchronisées.
         </p>
         <div className="border-t border-white/10 pt-2.5">
-          <p className="mb-1.5 text-[10px] font-mono tracking-[0.2em] text-white/40">REJOINDRE</p>
+          <p className="mb-1.5 text-[10px] font-mono tracking-[0.2em] text-white/60">REJOINDRE</p>
           <div className="flex gap-1.5">
             <input
               value={salonInput}

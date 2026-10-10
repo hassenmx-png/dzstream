@@ -155,7 +155,7 @@ export default function PersonPage({ id }: { id: number }) {
                   <span className="flex items-center gap-1.5">
                     <Cake size={14} className="text-[rgb(var(--acc))]" />
                     {bornLabel} {fmtDate(person.birthday)}
-                    {age !== null && <span className="text-white/40">({age} ans)</span>}
+                    {age !== null && <span className="text-white/60">({age} ans)</span>}
                   </span>
                 )}
                 {person.deathday && (
@@ -210,19 +210,19 @@ export default function PersonPage({ id }: { id: number }) {
           {/* Bandeau stats de carrière */}
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-md border border-white/8 bg-white/[0.03] px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/40"><Film size={12} className="text-[rgb(var(--acc))]" /> FILMS</p>
+              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/60"><Film size={12} className="text-[rgb(var(--acc))]" /> FILMS</p>
               <p className="mt-1 font-display text-2xl font-black">{person.counts.movies}</p>
             </div>
             <div className="rounded-md border border-white/8 bg-white/[0.03] px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/40"><Tv size={12} className="text-[rgb(var(--acc))]" /> SÉRIES</p>
+              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/60"><Tv size={12} className="text-[rgb(var(--acc))]" /> SÉRIES</p>
               <p className="mt-1 font-display text-2xl font-black">{person.counts.series}</p>
             </div>
             <div className="rounded-md border border-white/8 bg-white/[0.03] px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/40"><Star size={12} className="text-[rgb(var(--acc))]" /> NOTE MOYENNE</p>
+              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/60"><Star size={12} className="text-[rgb(var(--acc))]" /> NOTE MOYENNE</p>
               <p className="mt-1 font-display text-2xl font-black">{avgRating ?? '—'}</p>
             </div>
             <div className="rounded-md border border-white/8 bg-white/[0.03] px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/40"><CalendarRange size={12} className="text-[rgb(var(--acc))]" /> CARRIÈRE</p>
+              <p className="flex items-center gap-1.5 text-[10px] font-mono-label text-white/60"><CalendarRange size={12} className="text-[rgb(var(--acc))]" /> CARRIÈRE</p>
               <p className="mt-1 font-display text-2xl font-black">{career ?? '—'}</p>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function PersonPage({ id }: { id: number }) {
           </div>
         </div>
         {sorted.length === 0 ? (
-          <p className="text-sm text-white/40">Aucun titre disponible dans le catalogue.</p>
+          <p className="text-sm text-white/60">Aucun titre disponible dans le catalogue.</p>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
             {sorted.map((m) => (

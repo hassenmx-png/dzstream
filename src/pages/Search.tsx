@@ -132,7 +132,7 @@ export default function SearchPage() {
             aria-label={listening ? 'Arrêter la dictée' : 'Rechercher par la voix'}
             title={listening ? 'Arrêter la dictée' : 'Rechercher par la voix'}
             className={`absolute right-0 top-1/2 -translate-y-1/2 transition-colors ${
-              listening ? 'text-red-400 animate-pulse' : 'text-white/40 hover:text-white/80'
+              listening ? 'text-red-400 animate-pulse' : 'text-white/60 hover:text-white/80'
             }`}
           >
             {listening ? <MicOff size={22} /> : <Mic size={22} />}
@@ -206,7 +206,7 @@ export default function SearchPage() {
       )}
 
       {!loading && query && movies.length === 0 && series.length === 0 && people.length === 0 && (
-        <p className="mt-10 text-white/40">Aucun résultat pour « {query} ».</p>
+        <p className="mt-10 text-white/60">Aucun résultat pour « {query} ».</p>
       )}
 
       {people.length > 0 && (
@@ -232,7 +232,7 @@ export default function SearchPage() {
                   <p className="truncate text-sm font-semibold group-hover:text-[rgb(var(--acc))] transition-colors">{p.name}</p>
                   <p className="text-[10px] font-mono-label text-[rgb(var(--acc))]/70 uppercase">{departmentFr(p.department)}</p>
                   {p.knownFor.length > 0 && (
-                    <p className="mt-0.5 truncate text-[11px] text-white/40">{p.knownFor.join(' · ')}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-white/60">{p.knownFor.join(' · ')}</p>
                   )}
                 </div>
               </button>

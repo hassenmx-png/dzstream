@@ -137,7 +137,7 @@ function AutoPlayPrefsBtn({ prefs, onChange }: { prefs: AutoPrefs; onChange: (p:
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative max-h-[75vh] w-80 space-y-3 overflow-y-auto rounded-lg border border-white/10 bg-[#0d0d0d] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <p className="text-[10px] font-mono uppercase tracking-widest text-white/40">Lecture auto — règles de choix</p>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-white/60">Lecture auto — règles de choix</p>
           <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] text-white/60">Qualité max</span>
             {seg(AUTO_QS, prefs.maxQ, (v) => onChange({ maxQ: v }))}
@@ -968,7 +968,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                       <button
                         onClick={() => setFrOnly(!frOnly)}
                         title="N'afficher que les sources dont le français est prouvé (VF ou VOSTFR explicite)"
-                        className={`px-3 py-2 border-r border-white/15 transition-colors ${frOnly ? 'bg-amber-400/20 text-amber-300 font-bold' : 'text-white/40 hover:text-white'}`}
+                        className={`px-3 py-2 border-r border-white/15 transition-colors ${frOnly ? 'bg-amber-400/20 text-amber-300 font-bold' : 'text-white/60 hover:text-white'}`}
                       >
                         🎯 FR SÛR{frOnly ? ' ✓' : ''}
                       </button>
@@ -1030,7 +1030,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
             )}
 
             {streams && filteredStreams.length === 0 && !streamsLoading && (
-              <p className="py-6 text-sm text-white/40">
+              <p className="py-6 text-sm text-white/60">
                 Aucune source {filter !== 'all' ? 'de ce type ' : ''}trouvée pour {isSeries ? 'cet épisode' : 'ce contenu'}.
                 Essaie un autre épisode, un autre filtre, ou installe d'autres addons.
               </p>
@@ -1084,7 +1084,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                       )}
                     </div>
                     <p className="mt-2 truncate text-xs font-semibold group-hover:text-[rgb(var(--acc))] transition-colors">{p.name}</p>
-                    {p.character && <p className="truncate text-[10px] text-white/40">{p.character}</p>}
+                    {p.character && <p className="truncate text-[10px] text-white/60">{p.character}</p>}
                   </button>
                 ))}
               </div>

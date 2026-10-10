@@ -29,7 +29,7 @@ export default function PlayerSubMenu({
 }) {
   return (
   <div className="absolute bottom-10 right-0 w-64 rounded-md border border-white/10 bg-[#0a0a0a]/95 backdrop-blur p-1.5 max-h-72 overflow-y-auto">
-    <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/40">
+    <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/60">
       SOUS-TITRES
     </p>
     <button
@@ -64,7 +64,7 @@ export default function PlayerSubMenu({
 
     {/* Réglages d'affichage : taille, couleur, fond, décalage */}
     <div className="mt-1.5 border-t border-white/10 px-3 pt-2 pb-2 space-y-2">
-      <p className="text-[10px] font-mono tracking-[0.2em] text-white/40">RÉGLAGES</p>
+      <p className="text-[10px] font-mono tracking-[0.2em] text-white/60">RÉGLAGES</p>
       <button
         onClick={toggleSubAuto}
         className="flex w-full items-center justify-between gap-2 text-left"

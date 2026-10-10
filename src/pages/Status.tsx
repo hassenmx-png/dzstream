@@ -12,7 +12,7 @@ type Service = { id: string; name: string; detail: string }
 const STATUS_META: Record<Health, { label: string; color: string; Icon: typeof CheckCircle2 }> = {
   ok: { label: 'EN LIGNE', color: 'text-emerald-400', Icon: CheckCircle2 },
   ko: { label: 'HORS LIGNE', color: 'text-red-400', Icon: XCircle },
-  pending: { label: 'TEST…', color: 'text-white/40', Icon: AlertTriangle },
+  pending: { label: 'TEST…', color: 'text-white/60', Icon: AlertTriangle },
 }
 
 /** Page « Statut des services » : ping chaque service vital et affiche
@@ -73,7 +73,7 @@ function PushNotifCard() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="text-sm font-bold tracking-wide">🔔 Notifications d'épisodes</div>
-          <div className="text-xs text-white/40">
+          <div className="text-xs text-white/60">
             {state === 'on'
               ? 'Activées — le serveur te prévient quand un épisode de tes séries sort (toutes les 6 h), même app fermée.'
               : 'Sois prévenu quand un épisode de tes séries suivies est disponible.'}
@@ -215,7 +215,7 @@ export default function StatusPage() {
               <li key={s.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
                 <div>
                   <div className="text-sm font-bold tracking-wide">{s.name}</div>
-                  <div className="text-xs text-white/40">{s.detail}</div>
+                  <div className="text-xs text-white/60">{s.detail}</div>
                 </div>
                 <div className={`flex items-center gap-2 text-xs font-bold ${meta.color}`}>
                   <meta.Icon className="h-4 w-4" aria-hidden />
@@ -235,7 +235,7 @@ export default function StatusPage() {
             Retester
           </button>
           {checkedAt && (
-            <span className="text-xs text-white/40">
+            <span className="text-xs text-white/60">
               Testé à {checkedAt.toLocaleTimeString('fr-FR')}
               {allOk ? ' — tout est opérationnel ✅' : ''}
             </span>

@@ -58,7 +58,7 @@ export default function PlayerAudioMenu({
   <div className="absolute bottom-10 right-0 w-64 rounded-md border border-white/10 bg-[#0a0a0a]/95 backdrop-blur p-1.5 max-h-72 overflow-y-auto">
     {audioTracks.length > 1 && (
       <>
-        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/40">
+        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/60">
           PISTE AUDIO
         </p>
         {audioTracks.map((t) => (
@@ -74,7 +74,7 @@ export default function PlayerAudioMenu({
     )}
     {tcAudioCount > 1 && (
       <>
-        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/40">
+        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/60">
           PISTE (CONVERSION AUDIO)
         </p>
         {Array.from({ length: tcAudioCount }, (_, i) => i).map((i) => (
@@ -90,7 +90,7 @@ export default function PlayerAudioMenu({
     )}
     {availableVersions.length > 0 && (
       <>
-        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/40">
+        <p className="px-3 pb-1 pt-2 text-[10px] font-mono tracking-[0.2em] text-white/60">
           VERSION {audioTracks.length > 1 ? '(AUTRE SOURCE)' : '— LANGUE DU FILM'}
         </p>
         {availableVersions.map((d) => (

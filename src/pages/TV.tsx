@@ -310,7 +310,7 @@ export default function TVPage() {
         </button>
       </div>
 
-      {loading && <p className="mt-10 px-5 text-sm text-white/40 md:px-12">Chargement des chaînes…</p>}
+      {loading && <p className="mt-10 px-5 text-sm text-white/60 md:px-12">Chargement des chaînes…</p>}
       {error && <p className="mt-10 px-5 text-sm text-red-400 md:px-12">{error}</p>}
 
       {!loading && !error && (

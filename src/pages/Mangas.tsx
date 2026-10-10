@@ -158,22 +158,22 @@ function SearchView({ onOpen }: { onOpen: (m: Manga) => void }) {
           value={q}
           onChange={(e) => run(e.target.value)}
           placeholder="Titre d'un manga…"
-          className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+          className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/60"
           autoFocus
         />
         {busy && <Loader2 size={16} className="animate-spin text-[rgb(var(--acc))]" aria-hidden />}
       </div>
       {results === null ? (
-        <p className="text-center text-sm text-white/40">Tape au moins 2 lettres — recherche sur toutes les sources FR</p>
+        <p className="text-center text-sm text-white/60">Tape au moins 2 lettres — recherche sur toutes les sources FR</p>
       ) : results.length === 0 ? (
-        <p className="text-center text-sm text-white/40">Aucun résultat</p>
+        <p className="text-center text-sm text-white/60">Aucun résultat</p>
       ) : (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
           {results.map((m, i) => (
             <button key={`${m.id}-${i}`} onClick={() => onOpen(m)} className="group flex flex-col gap-1.5 text-left">
               <Thumb url={m.thumbnailUrl} title={m.title} className="aspect-[3/4] w-full rounded-sm transition group-hover:ring-2 group-hover:ring-[rgb(var(--acc))]" />
               <span className="line-clamp-2 text-xs text-white/80">{m.title}</span>
-              <span className="text-[10px] text-white/40">{(m as any).sourceName}{typeof (m as any).readableCount === 'number' && (m as any).readableCount === 0 ? ' · externe' : ''}</span>
+              <span className="text-[10px] text-white/60">{(m as any).sourceName}{typeof (m as any).readableCount === 'number' && (m as any).readableCount === 0 ? ' · externe' : ''}</span>
             </button>
           ))}
         </div>
@@ -265,7 +265,7 @@ function DetailView({ manga, onRead }: { manga: Manga; onRead: (chapters: Chapte
         ) : chapters.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-8 text-center">
             <p className="text-sm text-white/60">Aucun chapitre FR hébergé pour ce manga</p>
-            <p className="max-w-xs text-xs text-white/40">Licence : les chapitres FR pointent vers MangaPlus. Essaie une version « Colored » ou un autre titre.</p>
+            <p className="max-w-xs text-xs text-white/60">Licence : les chapitres FR pointent vers MangaPlus. Essaie une version « Colored » ou un autre titre.</p>
           </div>
         ) : (
           <ul className="divide-y divide-white/5">
@@ -281,10 +281,10 @@ function DetailView({ manga, onRead }: { manga: Manga; onRead: (chapters: Chapte
                     className="flex w-full items-center justify-between gap-3 py-2.5 text-left hover:bg-white/5"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm text-white/90">
-                      <span className="mr-2 inline-block w-10 text-white/40">#{row.chapter.chapterNumber}</span>
+                      <span className="mr-2 inline-block w-10 text-white/60">#{row.chapter.chapterNumber}</span>
                       {row.chapter.name && row.chapter.name !== `Chapitre ${row.chapter.chapterNumber}` ? row.chapter.name : `Chapitre ${row.chapter.chapterNumber}`}
                     </span>
-                    <span className="shrink-0 text-xs text-white/40">{row.chapter.scanlator}</span>
+                    <span className="shrink-0 text-xs text-white/60">{row.chapter.scanlator}</span>
                     <ChevronRight size={16} className="shrink-0 text-white/30" aria-hidden />
                   </button>
                 </li>
@@ -430,7 +430,7 @@ function Reader({ manga, chapters, index }: { manga: Manga; chapters: Chapter[];
       {/* Fin de chapitre */}
       {pages && nextChrono && (
         <div className="flex flex-col items-center gap-2 border-t border-white/10 py-10" onClick={(e) => e.stopPropagation()}>
-          <p className="text-xs text-white/40">Fin du chapitre {chapter.chapterNumber}</p>
+          <p className="text-xs text-white/60">Fin du chapitre {chapter.chapterNumber}</p>
           <button onClick={() => goTo(idx - 1)}
             className="flex items-center gap-2 rounded-sm bg-[rgb(var(--acc))] px-6 py-3 text-sm font-bold text-white">
             Chapitre suivant : {nextChrono.chapterNumber} <ChevronRight size={16} aria-hidden />
@@ -438,7 +438,7 @@ function Reader({ manga, chapters, index }: { manga: Manga; chapters: Chapter[];
         </div>
       )}
       {pages && !nextChrono && (
-        <p className="py-12 text-center text-sm text-white/40">Dernier chapitre disponible — à jour ! 🎉</p>
+        <p className="py-12 text-center text-sm text-white/60">Dernier chapitre disponible — à jour ! 🎉</p>
       )}
 
       {/* Repere PERMANENT : toujours savoir ou on en est */}
@@ -508,8 +508,8 @@ function Reader({ manga, chapters, index }: { manga: Manga; chapters: Chapter[];
                     }`}
                   >
                     <span className="min-w-0 flex-1 truncate text-sm">
-                      <span className="mr-2 inline-block w-10 text-white/40">#{ch.chapterNumber}</span>
-                      {ch.volume ? <span className="mr-2 text-[10px] text-white/40">T{ch.volume}</span> : null}
+                      <span className="mr-2 inline-block w-10 text-white/60">#{ch.chapterNumber}</span>
+                      {ch.volume ? <span className="mr-2 text-[10px] text-white/60">T{ch.volume}</span> : null}
                       {ch.name && ch.name !== `Chapitre ${ch.chapterNumber}` ? ch.name : `Chapitre ${ch.chapterNumber}`}
                     </span>
                     {i === idx && <span className="text-[10px] font-bold uppercase">En lecture</span>}

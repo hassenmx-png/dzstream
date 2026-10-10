@@ -243,7 +243,7 @@ export default function LibraryPage() {
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{p.name}</p>
-                  {p.episodeLabel && <p className="text-xs text-white/40">{p.episodeLabel}</p>}
+                  {p.episodeLabel && <p className="text-xs text-white/60">{p.episodeLabel}</p>}
                   <p className="mt-1 text-[11px] font-mono text-[rgb(var(--acc))]/80">
                     {Math.round((p.time / (p.duration || 1)) * 100)}% regardé
                   </p>
@@ -301,7 +301,7 @@ export default function LibraryPage() {
                 onClick={() => go({ name: 'detail', type: w.type, id: w.id })}
                 className="rounded-md border border-white/10 bg-white/[0.03] p-4 text-left transition-colors hover:bg-white/5"
               >
-                <p className="text-[10px] font-mono-label text-white/40">{w.type === 'movie' ? 'FILM' : 'SÉRIE'}</p>
+                <p className="text-[10px] font-mono-label text-white/60">{w.type === 'movie' ? 'FILM' : 'SÉRIE'}</p>
                 <p className="mt-1.5 line-clamp-3 text-sm font-semibold text-white/85">{w.name}</p>
               </button>
             ))}
@@ -373,7 +373,7 @@ export default function LibraryPage() {
                   </span>
                   <span className="truncate text-sm">
                     {p.name}
-                    {p.episodeLabel && <span className="text-white/40"> — {p.episodeLabel}</span>}
+                    {p.episodeLabel && <span className="text-white/60"> — {p.episodeLabel}</span>}
                   </span>
                   <span className="text-[11px] font-mono text-white/30 shrink-0">
                     {Math.round((p.time / (p.duration || 1)) * 100)}%
@@ -402,7 +402,7 @@ export default function LibraryPage() {
             <Users size={16} className="text-[rgb(var(--acc))]" />
             <h2 className="font-display font-bold">Salon — regarder ensemble</h2>
           </div>
-          <p className="text-xs text-white/40 leading-relaxed mb-3">
+          <p className="text-xs text-white/60 leading-relaxed mb-3">
             Un ami a lancé un salon ? Entre son code : le film se lance chez toi, calé sur sa lecture
             (pause, avance, épisode suivant — tout est synchronisé).
           </p>

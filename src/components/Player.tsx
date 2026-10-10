@@ -2074,7 +2074,7 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
         <div className="absolute top-24 right-5 rounded-md border border-white/10 bg-black/70 backdrop-blur px-3 py-2 text-[10px] font-mono space-y-1">
           <p className="flex items-center gap-2 text-white/80">
             <ArrowDownToLine size={11} className="text-[rgb(var(--acc))]" /> {formatBytes(stats.downSpeed)}/s
-            <span className="text-white/40">·</span>
+            <span className="text-white/60">·</span>
             <Users size={11} className="text-[rgb(var(--acc))]" /> {stats.peers}
           </p>
         </div>

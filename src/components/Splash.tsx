@@ -55,7 +55,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
         />
       </div>
       <p
-        className="bracket-label rise-in relative mb-5 text-white/40"
+        className="bracket-label rise-in relative mb-5 text-white/60"
         style={{ animationDelay: '100ms' }}
       >
         Lecteur multimédia ouvert

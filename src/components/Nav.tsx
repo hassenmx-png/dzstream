@@ -21,7 +21,7 @@ const TABS: { label: string; icon: typeof Home; view: View; key: string }[] = [
   { label: 'Accueil', icon: Home, view: { name: 'home' }, key: 'home' },
   { label: 'Films', icon: Film, view: { name: 'movies' }, key: 'movies' },
   { label: 'Séries', icon: Tv, view: { name: 'series' }, key: 'series' },
-  { label: 'Recherche', icon: Search, view: { name: 'search' }, key: 'search' },
+  { label: 'TV', icon: MonitorPlay, view: { name: 'tv' }, key: 'tv' },
   { label: 'Ma Liste', icon: Bookmark, view: { name: 'library' }, key: 'library' },
   { label: 'Scans', icon: BookOpen, view: { name: 'mangas' }, key: 'mangas' },
 ]
@@ -45,13 +45,13 @@ export function AccentMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Changer de thème"
         title="Thème de l'interface"
-        className={`p-2.5 rounded-full transition-colors hover:bg-white/10 ${open ? 'text-[rgb(var(--acc))]' : 'text-white/80'}`}
+        className={`p-3 rounded-full transition-colors hover:bg-white/10 ${open ? 'text-[rgb(var(--acc))]' : 'text-white/80'}`}
       >
         <Palette size={19} />
       </button>
       {open && (
         <div className="absolute right-0 top-12 z-50 w-44 rounded-md border border-white/10 bg-[#0a0a0a]/95 p-2 shadow-xl backdrop-blur">
-          <p className="px-2 pb-1.5 text-[10px] font-mono tracking-[0.2em] text-white/40">THÈME</p>
+          <p className="px-2 pb-1.5 text-[10px] font-mono tracking-[0.2em] text-white/60">THÈME</p>
           {ACCENTS.map((a) => (
             <button
               key={a.id}
@@ -145,7 +145,7 @@ export default function Nav() {
               onClick={() => go({ name: 'tv' })}
               aria-label="TV en direct"
               title="TV en direct"
-              className="p-2.5 rounded-full transition-colors hover:bg-white/10 text-white/80"
+              className="p-3 rounded-full transition-colors hover:bg-white/10 text-white/80"
             >
               <MonitorPlay size={19} />
             </button>
@@ -153,7 +153,7 @@ export default function Nav() {
               onClick={() => go({ name: 'settings' })}
               aria-label="Réglages"
               title="Réglages"
-              className="p-2.5 rounded-full transition-colors hover:bg-white/10 text-white/80"
+              className="p-3 rounded-full transition-colors hover:bg-white/10 text-white/80"
             >
               <Settings size={19} />
             </button>
@@ -162,7 +162,7 @@ export default function Nav() {
             <button
               onClick={() => go({ name: 'search' })}
               aria-label="Rechercher"
-              className={`hidden md:inline-flex p-2.5 rounded-full transition-colors hover:bg-white/10 ${
+              className={`inline-flex p-3 rounded-full transition-colors hover:bg-white/10 ${
                 active === 'search' ? 'text-[rgb(var(--acc))]' : 'text-white/80'
               }`}
             >

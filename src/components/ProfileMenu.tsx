@@ -77,7 +77,7 @@ export default function ProfileMenu() {
 
       {open && (
         <div className="fixed right-4 top-16 z-[999] w-64 rounded-md border border-white/10 bg-[#0a0a0a]/95 p-2 shadow-xl backdrop-blur">
-          <p className="px-2 pb-1.5 text-[10px] font-mono tracking-[0.2em] text-white/40">PROFILS</p>
+          <p className="px-2 pb-1.5 text-[10px] font-mono tracking-[0.2em] text-white/60">PROFILS</p>
 
           {profiles.map((p) => (
             <div key={p.id} className="flex items-center gap-1">
@@ -91,7 +91,7 @@ export default function ProfileMenu() {
                   {p.name.slice(0, 1).toUpperCase()}
                 </span>
                 <span className="flex-1 truncate">{p.name}</span>
-                {p.pin && <Lock size={11} className="text-white/40" />}
+                {p.pin && <Lock size={11} className="text-white/60" />}
               </button>
               {profiles.length > 1 && (
                 <button
