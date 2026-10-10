@@ -216,6 +216,19 @@
     from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  /* Vegeta fonce depuis la gauche avec recul d'arrivee, puis flotte. */
+  @keyframes vegeta-enter {
+    0%   { opacity: 0; transform: translateX(-60vw) translateY(10vh) rotate(-14deg) scale(1.15); }
+    55%  { opacity: 1; transform: translateX(3vw) translateY(-1vh) rotate(2deg) scale(1); }
+    75%  { transform: translateX(-1vw) translateY(0) rotate(-1deg); }
+    100% { opacity: 1; transform: translateX(0) translateY(0) rotate(0); }
+  }
+  @keyframes vegeta-float {
+    from { transform: translateY(0); opacity: 1; }
+    to   { transform: translateY(-10px); opacity: 1; }
+  }
+  .vegeta-enter { animation: vegeta-enter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .vegeta-float { animation: vegeta-float 1.6s ease-in-out 0.85s infinite alternate both; }
   .rise-in { animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
   /* Skeleton shimmer (chargement des catalogues) */

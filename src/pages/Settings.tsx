@@ -395,7 +395,7 @@ export default function SettingsPage() {
             sources premium AllDebrid/TorBox via Torrentio et HDHub. Tes données restent sur ton appareil.
           </p>
           <p className="mt-3 text-[11px] font-mono text-white/40">
-            Build : 2026-10-08 22:25 UTC — iOS : watchdog anti ecran noir</p>
+            Build : 2026-10-10 15:40 UTC — intro Vegeta au lancement</p>
         </section>
       </div>
 

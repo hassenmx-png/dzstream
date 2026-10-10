@@ -10,6 +10,7 @@ const STREAM = ['S','T','R','E','A','M']
  */
 export default function Splash({ onDone }: { onDone: () => void }) {
   const [leaving, setLeaving] = useState(false)
+  const [vgReady, setVgReady] = useState(false)
 
   useEffect(() => {
     const t1 = setTimeout(() => setLeaving(true), 1100)
@@ -38,6 +39,23 @@ export default function Splash({ onDone }: { onDone: () => void }) {
             'radial-gradient(45% 35% at 50% 55%, rgba(var(--acc),0.07), transparent 70%)',
         }}
       />
+      {/* Vegeta fonce dans l'ecran a l'ouverture : ancre par la gauche
+          du centre, derriere les textes (z-0 + ordre DOM) */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-y-1/2"
+        style={{ marginLeft: 'min(-40vw, -300px)' }}
+        aria-hidden
+      >
+        <img
+          src="/vegeta.webp"
+          alt=""
+          onLoad={() => setVgReady(true)}
+          className={vgReady
+            ? 'vegeta-enter w-36 drop-shadow-[0_0_35px_rgba(59,130,246,0.45)] md:w-52'
+            : 'w-36 opacity-0 md:w-52'}
+          onAnimationEnd={(e) => e.currentTarget.classList.add('vegeta-float')}
+        />
+      </div>
       <p
         className="bracket-label rise-in relative mb-5 text-white/40"
         style={{ animationDelay: '100ms' }}
