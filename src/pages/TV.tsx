@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MonitorPlay, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchFrenchChannels, fetchTvVooChannels, type TvChannel } from '@/lib/iptv'
+import { toast } from '@/lib/toast'
 
 interface EpgEntry { now: string; stop: number; next?: string }
 type EpgMap = Record<string, EpgEntry>
@@ -116,12 +117,27 @@ export default function TVPage() {
     setLoading(true)
     setError(null)
     // Deux sources fusionnées : iptv-org (grandes chaînes) + TvVoo (sport, 700+).
+    // Dédoublonnage par nom normalisé : une seule carte par chaîne. En cas de
+    // doublon, la variante TvVoo gagne mais le flux iptv-org est CHAÎNÉ en
+    // secours dans le resolver (fallback croisé entre sources).
     Promise.allSettled([fetchFrenchChannels(), fetchTvVooChannels()])
       .then(([a, b]) => {
-        const merged = [
-          ...(a.status === 'fulfilled' ? a.value : []),
-          ...(b.status === 'fulfilled' ? b.value : []),
-        ]
+        const iptv = a.status === 'fulfilled' ? a.value : []
+        const voo = b.status === 'fulfilled' ? b.value : []
+        const byName = new Map<string, TvChannel>()
+        for (const ch of [...voo, ...iptv]) {
+          const k = normCh(ch.name)
+          const prev = byName.get(k)
+          if (!prev) { byName.set(k, ch); continue }
+          const tvCh = prev.resolver ? prev : ch
+          const other = prev.resolver ? ch : prev
+          if (tvCh.resolver && other.url) {
+            const origResolver = tvCh.resolver
+            const fallbackUrl = other.url
+            byName.set(k, { ...tvCh, resolver: async () => [...(await origResolver()), fallbackUrl] })
+          }
+        }
+        const merged = [...byName.values()]
         if (merged.length === 0) {
           setError('Impossible de charger les chaînes. Vérifie ta connexion.')
         }
@@ -206,7 +222,10 @@ export default function TVPage() {
 
     let attempt = 0
     const tryCurrent = () => {
-      if (attempt >= urls.length) return
+      if (attempt >= urls.length) {
+        toast(`${ch.name} indisponible pour le moment`)
+        return
+      }
       const proxied = '/api/stream/tvproxy?u=' + encodeURIComponent(urls[attempt])
       hlsRef.current?.destroy()
       hlsRef.current = null
