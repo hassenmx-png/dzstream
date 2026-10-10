@@ -15,7 +15,7 @@ export interface PlayEvt { at: number; host: string }
 const plays: PlayEvt[] = [];
 export function trackPlay(host: string): void {
   plays.push({ at: Date.now(), host });
-  if (plays.length > 40) plays.shift();
+  if (plays.length > 500) plays.shift();
 }
 
 const bootAt = Date.now();
@@ -78,5 +78,20 @@ adminApp.get("/stats", async (c) => {
     },
     pushAbonnes: pushSubs,
     torbox,
+    parHeure: Array.from({ length: 24 }, (_, i) => {
+      const debut = now - (24 - i) * 3600 * 1000;
+      return plays.filter((pl) => pl.at >= debut && pl.at < debut + 3600 * 1000).length;
+    }),
   });
+});
+
+// Redémarrage doux : systemd relance le process aussitôt après sa mort.
+// On répond D'ABORD au client, puis on se tue (détaché) 800 ms plus tard.
+adminApp.post("/restart", (c) => {
+  setTimeout(() => {
+    try {
+      execSync("systemctl restart novastream &", { stdio: "ignore" });
+    } catch { /* systemd gère */ }
+  }, 800);
+  return c.json({ ok: true, message: "Redémarrage en cours — reviens dans ~15 s" });
 });

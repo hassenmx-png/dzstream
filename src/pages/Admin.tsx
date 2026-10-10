@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Activity, Cpu, Gauge, RefreshCw, Satellite, Users } from 'lucide-react'
+import { Activity, Cpu, Gauge, Power, RefreshCw, Satellite, Users } from 'lucide-react'
 
 interface Stats {
   systeme: {
@@ -17,6 +17,7 @@ interface Stats {
     dernieres: { at: number; host: string }[]
   }
   pushAbonnes: number
+  parHeure?: number[]
   torbox: {
     premium: boolean
     expireLe: string | null
@@ -52,6 +53,7 @@ const heure = (ts: number) => new Date(ts).toLocaleTimeString('fr-FR', { hour: '
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [err, setErr] = useState(false)
+  const [restarting, setRestarting] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -126,6 +128,27 @@ export default function AdminPage() {
                   <p className="text-xs text-white/55">lectures / 24 h</p>
                 </div>
               </div>
+              {stats.parHeure && stats.parHeure.some((n) => n > 0) && (
+                <div className="mt-3 border-t border-white/8 pt-2">
+                  <p className="mb-1.5 text-[10px] uppercase tracking-wider text-white/40">Lectures par heure (24 h)</p>
+                  <div className="flex h-12 items-end gap-[2px]">
+                    {stats.parHeure.map((n, i) => {
+                      const max = Math.max(...stats.parHeure!, 1)
+                      return (
+                        <div
+                          key={i}
+                          title={`${n} lecture${n > 1 ? 's' : ''}`}
+                          className="flex-1 rounded-sm bg-[rgb(var(--acc))]/70 transition-all duration-500"
+                          style={{ height: `${Math.max(4, (n / max) * 100)}%`, opacity: n ? 0.4 + 0.6 * (n / max) : 0.15 }}
+                        />
+                      )
+                    })}
+                  </div>
+                  <div className="mt-0.5 flex justify-between text-[9px] text-white/30">
+                    <span>il y a 24 h</span><span>maintenant</span>
+                  </div>
+                </div>
+              )}
               {stats.activite.dernieres.length > 0 && (
                 <div className="mt-3 space-y-1 border-t border-white/8 pt-2">
                   {stats.activite.dernieres.slice(0, 6).map((p, i) => (
@@ -163,6 +186,22 @@ export default function AdminPage() {
               <p className="font-display text-3xl font-black">{stats.pushAbonnes}</p>
               <p className="text-xs text-white/55">appareil{stats.pushAbonnes > 1 ? 's' : ''} abonné{stats.pushAbonnes > 1 ? 's' : ''} aux alertes épisodes</p>
             </Card>
+
+            <div className="sm:col-span-2">
+              <button
+                disabled={restarting}
+                onClick={async () => {
+                  if (!window.confirm('Redémarrer le serveur DZ STREAM ? (~15 s de coupure)')) return
+                  setRestarting(true)
+                  try { await fetch('/api/admin/restart', { method: 'POST' }) } catch { /* attendu */ }
+                  setTimeout(() => { setRestarting(false); void load() }, 16000)
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+              >
+                <Power size={15} />
+                {restarting ? 'Redémarrage en cours… (~15 s)' : 'Redémarrer le serveur'}
+              </button>
+            </div>
 
             <div className="sm:col-span-2">
               <Card title="Accès rapide" icon={Satellite}>
