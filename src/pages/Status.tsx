@@ -245,6 +245,13 @@ export default function StatusPage() {
           </p>
         )}
         <PushNotifCard />
+
+        <a
+          href="#/admin"
+          className="mt-6 block rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-center text-xs text-white/40 transition hover:border-[rgb(var(--acc))]/40 hover:text-white/80"
+        >
+          Tableau de bord admin →
+        </a>
       </div>
     </div>
   )

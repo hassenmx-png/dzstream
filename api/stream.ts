@@ -1,3 +1,4 @@
+import { trackPlay } from "./admin";
 import { Hono } from "hono";
 import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
@@ -789,6 +790,7 @@ async function handlePlay(c: any) {
       redirect: "follow",
     });
     console.log("[play] target:", (data.u ?? "").slice(0, 80), "-> upstream:", upstream.status, upstream.url.slice(0, 80));
+    try { trackPlay(new URL(upstream.url).host); } catch { /* ignore */ }
     // Page d'erreur en amont (ex. AllDebrid "Serveur non autorisé") : on
     // renvoie un 502 JSON propre pour que le player passe à la source suivante.
     // Une réponse vidéo ne doit JAMAIS être du HTML : page d'erreur TorBox

@@ -144,6 +144,7 @@ export type View =
   | { name: 'tv' }
   | { name: 'mangas' }
   | { name: 'status' }
+  | { name: 'admin' }
   | { name: 'detail'; id: string; type: MediaType }
   | { name: 'person'; id: number }
   | { name: 'shared'; code: string }

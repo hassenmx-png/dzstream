@@ -8,6 +8,7 @@ import { streamApp } from "./stream";
 import { syncApp } from "./sync";
 import { tmdbApp } from "./tmdb";
 import { opensubsApp } from "./opensubs";
+import { adminApp } from "./admin";
 import { imgApp } from "./imgproxy";
 import { mangaApp } from "./manga";
 import { env } from "./lib/env";
@@ -168,6 +169,9 @@ app.route("/api/tmdb", tmdbApp);
 
 // Sous-titres FR (OpenSubtitles sans CORS → proxy serveur)
 app.route("/api/opensubs", opensubsApp);
+
+// Tableau de bord admin (stats système + activité + Torbox)
+app.route("/api/admin", adminApp);
 
 // Proxy d'images (hôtes d'affiches uniquement) — sert au halo ambiant
 app.route("/api/img", imgApp);
