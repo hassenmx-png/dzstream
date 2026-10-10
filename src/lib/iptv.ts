@@ -8,7 +8,7 @@ export interface TvChannel {
   url: string
   tvgId?: string
   /** Si présent, l'URL du flux est résolue au clic (endpoints JSON). */
-  resolver?: () => Promise<string | null>
+  resolver?: () => Promise<string[]>  /* toutes les variantes, dans l'ordre */
 }
 
 /** TvVoo (ElfHosted) : 700+ chaînes FR dont le sport. L'URL finale est
@@ -31,11 +31,11 @@ export async function fetchTvVooChannels(): Promise<TvChannel[]> {
       resolver: async () => {
         try {
           const r = await fetch(api, { signal: AbortSignal.timeout(15000) })
-          if (!r.ok) return null
+          if (!r.ok) return []
           const sd = (await r.json()) as { streams?: { url?: string }[] }
-          return sd.streams?.[0]?.url ?? null
+          return (sd.streams ?? []).map((x) => x.url).filter((u): u is string => !!u)
         } catch {
-          return null
+          return []
         }
       },
     })

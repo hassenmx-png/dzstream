@@ -183,38 +183,48 @@ export default function TVPage() {
     showOsd(ch, visible.length > 0 ? visible : channels)
     const v = videoRef.current
     if (!v) return
-    // Source à endpoint JSON (TvVoo) : on résout le vrai flux au clic.
-    let url = ch.url
+    // Source à endpoint JSON (TvVoo) : on résout TOUTES les variantes au clic.
+    // Si une variante est morte (liens ephemeres), on enchaine automatiquement
+    // sur la suivante au lieu d'afficher un ecran noir.
+    let urls = ch.url ? [ch.url] : []
     if (ch.resolver) {
-      const resolved = await ch.resolver()
-      if (!resolved) return
-      url = resolved
+      urls = await ch.resolver()
+      if (urls.length === 0) return
     }
+    hlsRef.current?.destroy()
+    hlsRef.current = null
+
     // Tous les flux passent par le proxy serveur : les URL https peuvent
     // rediriger vers du http (TvVoo) -> contenu mixte bloque, et beaucoup
     // d'upstream n'envoient pas de CORS. Le serveur n'a ni CORS ni mixed
     // content, suit les redirections et reecrit les playlists HLS.
-    url = '/api/stream/tvproxy?u=' + encodeURIComponent(url)
-    hlsRef.current?.destroy()
-    hlsRef.current = null
-    if (v.canPlayType('application/vnd.apple.mpegurl')) {
-      v.src = url
-    } else {
-      try {
-        const { default: Hls } = await import('hls.js')
-        if (Hls.isSupported()) {
-          const hls = new Hls({ maxBufferLength: 30 })
-          hlsRef.current = hls
-          hls.loadSource(url)
-          hls.attachMedia(v)
-        } else {
-          v.src = url
-        }
-      } catch {
-        v.src = url
-      }
+    const native = v.canPlayType('application/vnd.apple.mpegurl')
+    let Hls: (typeof import('hls.js'))['default'] | null = null
+    if (!native) {
+      try { Hls = (await import('hls.js')).default } catch { Hls = null }
     }
-    v.play().catch(() => { /* autoplay refusé : l'utilisateur appuie sur play */ })
+
+    let attempt = 0
+    const tryCurrent = () => {
+      if (attempt >= urls.length) return
+      const proxied = '/api/stream/tvproxy?u=' + encodeURIComponent(urls[attempt])
+      hlsRef.current?.destroy()
+      hlsRef.current = null
+      v.onerror = () => { attempt += 1; tryCurrent() }
+      if (native || !Hls || !Hls.isSupported()) {
+        v.src = proxied
+      } else {
+        const hls = new Hls({ maxBufferLength: 30 })
+        hlsRef.current = hls
+        hls.on(Hls.Events.ERROR, (_e, data) => {
+          if (data.fatal) { attempt += 1; tryCurrent() }
+        })
+        hls.loadSource(proxied)
+        hls.attachMedia(v)
+      }
+      v.play().catch(() => { /* autoplay refuse : l'utilisateur appuie sur play */ })
+    }
+    tryCurrent()
   }
 
   return (
