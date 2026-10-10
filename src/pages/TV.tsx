@@ -254,7 +254,7 @@ export default function TVPage() {
           <h1 className="text-2xl font-black tracking-tight md:text-3xl">TV en direct</h1>
         </div>
         <p className="mt-1 text-sm text-white/50">
-          Chaînes françaises en direct (iptv-org + TvVoo) — {channels.length} chaînes
+          Chaînes françaises en direct (iptv-org + TvVoo) — {enriched.length} chaînes
         </p>
       </div>
 
@@ -323,7 +323,7 @@ export default function TVPage() {
           onClick={() => setGroup(null)}
           className={`rounded-full border px-3.5 py-1.5 text-xs transition-colors ${!group ? 'border-[rgb(var(--acc))] text-[rgb(var(--acc))]' : 'border-white/10 text-white/60 hover:text-white'}`}
         >
-          Toutes ({channels.length})
+          Toutes ({enriched.length})
         </button>
         {groups.map(([g, n]) => (
           <button
