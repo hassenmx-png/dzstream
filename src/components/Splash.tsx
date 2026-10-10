@@ -43,18 +43,14 @@ export default function Splash({ onDone }: { onDone: () => void }) {
       />
       {/* Vegeta fonce dans l'ecran a l'ouverture : ancre par la gauche
           du centre, derriere les textes (z-0 + ordre DOM) */}
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-y-1/2"
-        style={{ marginLeft: 'max(-40vw, -300px)' }}
-        aria-hidden
-      >
+      <div className="vegeta-wrap" aria-hidden>
         <img
           src="/vegeta.webp"
           alt=""
           onLoad={() => setVgReady(true)}
           className={vgReady
-            ? 'vegeta-enter w-36 drop-shadow-[0_0_35px_rgba(59,130,246,0.45)] md:w-52'
-            : 'w-36 opacity-0 md:w-52'}
+            ? 'vegeta-enter w-28 drop-shadow-[0_0_35px_rgba(59,130,246,0.45)] md:w-52'
+            : 'w-28 opacity-0 md:w-52'}
           onAnimationEnd={(e) => e.currentTarget.classList.add('vegeta-float')}
         />
       </div>
