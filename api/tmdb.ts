@@ -314,6 +314,23 @@ tmdbApp.get("/ratings/:imdbId", async (c) => {
   return c.json(out);
 });
 
+// Méta FR via l'addon TMDB ElfHosted (synopsis FR du hero et des fiches) :
+// proxifié ici pour profiter du cache mémoire 1 h de boot.ts et éviter les
+// 4-5 s de latence navigateur → elfhosted sur chaque nouvelle affiche.
+tmdbApp.get("/frmeta/:type/:id", async (c) => {
+  const type = c.req.param("type") === "series" ? "series" : "movie";
+  const id = c.req.param("id");
+  if (!/^tt\d+$/.test(id)) return c.json({ meta: null }, 400);
+  try {
+    const { status, body } = await httpsJSON<{ meta?: unknown }>(
+      `https://tmdb.elfhosted.com/fr-FR/meta/${type}/${id}.json`, 6000);
+    if (status !== 200) return c.json({ meta: null }, 502);
+    return c.json(body);
+  } catch {
+    return c.json({ meta: null }, 502);
+  }
+});
+
 tmdbApp.get("/extras/:imdbId", async (c) => {
   const imdbId = c.req.param("imdbId");
   if (!/^tt\d+$/.test(imdbId)) return c.json({ error: "id invalide" }, 400);

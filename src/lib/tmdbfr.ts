@@ -6,7 +6,7 @@ import type { MetaFull } from '@/types'
  * genres et résumés d'épisodes en français, sans rien configurer.
  * Uniquement pour les IDs IMDB (tt…) — Cinemeta reste la référence.
  */
-const BASE = 'https://tmdb.elfhosted.com/fr-FR'
+const BASE = '/api/tmdb/frmeta'  // proxy serveur (cache 1 h) — avant : appel direct elfhosted, 4-5 s
 
 const cache = new Map<string, MetaFull | null>()
 
@@ -16,7 +16,7 @@ export async function fetchMetaFr(type: string, id: string): Promise<MetaFull | 
   if (cache.has(key)) return cache.get(key) ?? null
   try {
     const mt = type === 'series' ? 'series' : 'movie'
-    const res = await fetch(`${BASE}/meta/${mt}/${encodeURIComponent(id)}.json`, {
+    const res = await fetch(`${BASE}/${mt}/${encodeURIComponent(id)}`, {
       signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) throw new Error('tmdb fr indisponible')
