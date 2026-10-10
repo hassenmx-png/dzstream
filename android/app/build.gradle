@@ -52,3 +52,6 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
+// Signature debug permanente (mise a jour sans desinstallation)
+apply from: rootProject.file('dz-signing.gradle')
