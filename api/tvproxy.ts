@@ -12,8 +12,8 @@ tvproxyApp.get("/", async (c) => {
   let up: Response;
   try {
     up = await fetch(target, {
-      headers: { "User-Agent": "Mozilla/5.0 (DZStreamTV)", "Referer": origin + "/", "Origin": origin },
-      signal: AbortSignal.timeout(15000),
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36", "Referer": origin + "/", "Origin": origin },
+      signal: AbortSignal.timeout(30000),
     });
   } catch { return c.json({ error: "amont injoignable" }, 502); }
   if (!up.ok && up.status !== 206) return c.json({ error: "amont " + up.status }, 502);
@@ -29,7 +29,14 @@ tvproxyApp.get("/", async (c) => {
   const base = target.slice(0, target.lastIndexOf("/") + 1);
   const rewritten = text.split("\n").map((line) => {
     const t = line.trim();
-    if (!t || t.startsWith("#")) return line;
+    if (!t) return line;
+    if (t.startsWith("#")) {
+      // Cles AES et pistes audio : URI="..." a proxifier aussi
+      return line.replace(/URI="([^"]+)"/g, (m, u) => {
+        const abs = /^https?:\/\//.test(u) ? u : new URL(u, base).href;
+        return `URI="/api/stream/tvproxy?u=${encodeURIComponent(abs)}"`;
+      });
+    }
     const abs = /^https?:\/\//.test(t) ? t : new URL(t, base).href;
     return `/api/stream/tvproxy?u=${encodeURIComponent(abs)}`;
   }).join("\n");

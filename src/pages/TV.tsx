@@ -190,9 +190,11 @@ export default function TVPage() {
       if (!resolved) return
       url = resolved
     }
-    // Flux http:// : contenu mixte bloque par la page HTTPS -> routage par le
-    // proxy serveur (HTTPS meme-origine, reecriture HLS + Referer geres).
-    if (url.startsWith('http://')) url = '/api/stream/tvproxy?u=' + encodeURIComponent(url)
+    // Tous les flux passent par le proxy serveur : les URL https peuvent
+    // rediriger vers du http (TvVoo) -> contenu mixte bloque, et beaucoup
+    // d'upstream n'envoient pas de CORS. Le serveur n'a ni CORS ni mixed
+    // content, suit les redirections et reecrit les playlists HLS.
+    url = '/api/stream/tvproxy?u=' + encodeURIComponent(url)
     hlsRef.current?.destroy()
     hlsRef.current = null
     if (v.canPlayType('application/vnd.apple.mpegurl')) {
