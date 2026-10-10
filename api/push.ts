@@ -6,8 +6,8 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 // @ts-expect-error — web-push ne publie pas de types
 import webpush from 'web-push'
 
-const VAPID_PUBLIC = 'BCHhT2bUOrQgpFrnjNMQ3dFUavJ5FxadNabBgp7D6oNIEaj_BYioTlwN_Obl3ac8ZDkUDvZTc-svyC4IyPj1JSg'
-const VAPID_PRIVATE = 'ZUi4jUyfYEKeT95VjE-awKZqqsvH7T1BYogGWxhdqiE'
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? ''
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? ''
 const SUBS_FILE = process.env.PUSH_SUBS_FILE ?? '/root/push-subs.json'
 const SCAN_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 h
 const NOUVEAUTE_FENETRE_JOURS = 3
