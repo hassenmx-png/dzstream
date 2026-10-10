@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSimklWatched } from '@/lib/simkl'
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, CalendarClock, Check, ChevronDown, Clock, Play, RefreshCw, Satellite, SlidersHorizontal, Star, Youtube, Users,, Dices } from 'lucide-react'
+  ArrowLeft, Bookmark, BookmarkCheck, CalendarClock, Check, ChevronDown, Clock, Play, RefreshCw, Satellite, SlidersHorizontal, Star, Youtube, Users, Dices } from 'lucide-react'
 import type { Episode, MediaType, MetaFull, MetaPreview, Stream, SubtitleTrack } from '@/types'
 import { fetchCatalog, GENRE_FR } from '@/lib/cinemeta'
 import {
