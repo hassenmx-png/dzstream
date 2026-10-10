@@ -971,6 +971,15 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
           return
         }
         video!.addEventListener('loadedmetadata', () => {
+          // Clip factice : un torrent pas encore en cache est parfois servi
+          // comme une vidéo « patientez » de quelques secondes. Un vrai film
+          // ou épisode ne fait JAMAIS moins de 60 s → source suivante aussitôt.
+          const metaDur = video!.duration
+          if (Number.isFinite(metaDur) && metaDur > 0 && metaDur < 60) {
+            toast('Torrent pas encore en cache premium — essai de la source suivante…')
+            if (!tryNextSourceRef.current()) setError('Aucune source en cache n\'a répondu. Réessaie dans quelques minutes.')
+            return
+          }
           // Filet de sécurité : un placeholder Torrentio (« failed_opening »,
           // « downloading ») qui aurait glissé entre les mailles du contrôle
           // préalable ne doit JAMAIS être joué — source suivante aussitôt.
