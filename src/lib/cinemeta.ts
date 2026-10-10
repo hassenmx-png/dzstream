@@ -45,4 +45,8 @@ export const GENRE_FR: Record<string, string> = {
   Fantasy: 'Fantastique', History: 'Histoire', Horror: 'Horreur', Mystery: 'Mystère',
   Romance: 'Romance', 'Science Fiction': 'Science-fiction', 'Sci-Fi': 'Science-fiction',
   Thriller: 'Thriller', War: 'Guerre', Western: 'Western', 'TV Movie': 'Téléfilm',
+  Biography: 'Biographie', Music: 'Musique', Musical: 'Comédie musicale',
+  Reality: 'Téléréalité', News: 'Actualités', Talk: 'Talk-show', Soap: 'Feuilleton',
+  Kids: 'Jeunesse', 'War & Politics': 'Guerre et politique',
+  'Sci-Fi & Fantasy': 'SF et fantastique', 'Action & Adventure': 'Action et aventure',
 }

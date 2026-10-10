@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSimklWatched } from '@/lib/simkl'
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, CalendarClock, Check, ChevronDown, Clock, Play, RefreshCw, Satellite, SlidersHorizontal, Star, Youtube, Users,
-} from 'lucide-react'
+  ArrowLeft, Bookmark, BookmarkCheck, CalendarClock, Check, ChevronDown, Clock, Play, RefreshCw, Satellite, SlidersHorizontal, Star, Youtube, Users,, Dices } from 'lucide-react'
 import type { Episode, MediaType, MetaFull, MetaPreview, Stream, SubtitleTrack } from '@/types'
 import { fetchCatalog, GENRE_FR } from '@/lib/cinemeta'
 import {
@@ -1107,7 +1106,7 @@ export default function DetailPage({ id, type }: { id: string; type: MediaType }
                     title="Lancer un épisode au hasard (parfait pour les sitcoms)"
                     className="flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/70 transition-colors hover:border-[rgb(var(--acc))] hover:text-[rgb(var(--acc))]"
                   >
-                    🎲 Aléatoire
+                    <Dices size={13} /> Aléatoire
                   </button>
                 </div>
                 <SeasonPicker

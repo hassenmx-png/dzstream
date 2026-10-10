@@ -530,7 +530,7 @@ export default function Home() {
             title="Lancer un film ou une série au hasard"
           >
             <Dices size={16} />
-            Mode soirée 🎲
+            Mode soirée
           </button>
           <button
             onClick={() => { setEditing(!editing); setShowAdd(false) }}
