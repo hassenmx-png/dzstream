@@ -12,10 +12,12 @@ export default function Splash({ onDone }: { onDone: () => void }) {
   const [leaving, setLeaving] = useState(false)
   const [vgReady, setVgReady] = useState(false)
 
+  // Le splash attend l'arrivee de Vegeta (max 2,6 s si connexion lente) :
+  // sans ca, l'anim jouerait sur une image pas encore telechargee.
   useEffect(() => {
-    const t1 = setTimeout(() => setLeaving(true), 1100)
+    const t1 = setTimeout(() => setLeaving(true), vgReady ? 1100 : 2600)
     return () => clearTimeout(t1)
-  }, [])
+  }, [vgReady])
 
   useEffect(() => {
     if (!leaving) return
@@ -43,7 +45,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
           du centre, derriere les textes (z-0 + ordre DOM) */}
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-y-1/2"
-        style={{ marginLeft: 'min(-40vw, -300px)' }}
+        style={{ marginLeft: 'max(-40vw, -300px)' }}
         aria-hidden
       >
         <img
