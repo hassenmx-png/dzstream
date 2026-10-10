@@ -5,7 +5,7 @@
  * CORS ouvert, User-Agent navigateur requis (fourni nativement).
  */
 
-const BASE = 'https://api.opensubtitles.com/api/v1'
+const BASE = '/api/opensubs'  // proxy serveur : api.opensubtitles.com n'envoie pas de CORS (appels navigateur bloqués)
 
 const KEY_STORAGE = 'novastream:opensubs-key'
 
@@ -64,7 +64,7 @@ export async function opensubsSearch(q: {
   if (q.episode != null) params.set('episode_number', String(q.episode))
   try {
     const res = await fetch(`${BASE}/subtitles?${params}`, {
-      headers: { 'Api-Key': key, 'User-Agent': 'DZ STREAM' },
+      headers: { 'x-os-key': key },
       signal: AbortSignal.timeout(10000),
     })
     if (!res.ok) return []
@@ -96,14 +96,14 @@ export async function opensubsDownloadVtt(fileId: number): Promise<string> {
   if (!key) throw new Error('Clé OpenSubtitles manquante')
   const res = await fetch(`${BASE}/download`, {
     method: 'POST',
-    headers: { 'Api-Key': key, 'User-Agent': 'DZ STREAM', 'Content-Type': 'application/json' },
+    headers: { 'x-os-key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ file_id: fileId }),
     signal: AbortSignal.timeout(8000),
   })
   if (!res.ok) throw new Error(`OpenSubtitles a répondu ${res.status}`)
   const j = (await res.json()) as { link?: string }
   if (!j.link) throw new Error('Lien de téléchargement introuvable')
-  const file = await fetch(j.link, { signal: AbortSignal.timeout(25000) })
+  const file = await fetch('/api/opensubs/file?u=' + encodeURIComponent(j.link), { signal: AbortSignal.timeout(25000) })  // lien signé sans CORS → proxy
   if (!file.ok) throw new Error('Téléchargement impossible')
   const buf = await file.arrayBuffer()
   let text: string

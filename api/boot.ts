@@ -7,6 +7,7 @@ import { createContext } from "./context";
 import { streamApp } from "./stream";
 import { syncApp } from "./sync";
 import { tmdbApp } from "./tmdb";
+import { opensubsApp } from "./opensubs";
 import { imgApp } from "./imgproxy";
 import { mangaApp } from "./manga";
 import { env } from "./lib/env";
@@ -164,6 +165,9 @@ app.route("/api/sync", syncApp);
 
 // Catalogue boosté : TMDB (bandes-annonces FR, casting, recommandations, personnes)
 app.route("/api/tmdb", tmdbApp);
+
+// Sous-titres FR (OpenSubtitles sans CORS → proxy serveur)
+app.route("/api/opensubs", opensubsApp);
 
 // Proxy d'images (hôtes d'affiches uniquement) — sert au halo ambiant
 app.route("/api/img", imgApp);

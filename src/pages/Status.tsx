@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Activity, CheckCircle2, RefreshCw, XCircle, AlertTriangle } from 'lucide-react'
-import { getDebrids } from '@/lib/addons'
 import { getOpensubsKey } from '@/lib/opensubs'
 import { getSimkl } from '@/lib/simkl'
 import { useLibrary, useProgress } from '@/lib/library'
@@ -113,11 +112,10 @@ export default function StatusPage() {
 
   const buildServices = useCallback((): Service[] => {
     const list: Service[] = []
-    const ad = getDebrids().find((d) => d.service === 'alldebrid')
     list.push({
-      id: 'alldebrid',
-      name: 'AllDebrid',
-      detail: ad ? `clé …${ad.key.slice(-4)}` : 'aucune clé configurée',
+      id: 'torbox',
+      name: 'Torbox',
+      detail: 'débrideur principal — clé serveur',
     })
     list.push({ id: 'torrentio', name: 'Torrentio', detail: 'sources torrent' })
     const osKey = getOpensubsKey()
@@ -137,12 +135,10 @@ export default function StatusPage() {
 
   const checkOne = useCallback(async (id: string): Promise<Health> => {
     try {
-      if (id === 'alldebrid') {
-        const ad = getDebrids().find((d) => d.service === 'alldebrid')
-        if (!ad) return 'ko'
-        // Via NOTRE serveur : la clé ne transite plus par le navigateur.
-        const r = await fetch('/api/stream/health?service=alldebrid', { signal: AbortSignal.timeout(8000) })
-        if (!r.ok) return 'ko' // ex. non authentifié (cookie)
+      if (id === 'torbox') {
+        // Via NOTRE serveur : la clé Torbox vit dans le .env, jamais dans le navigateur.
+        const r = await fetch('/api/stream/health?service=torbox', { signal: AbortSignal.timeout(8000) })
+        if (!r.ok) return 'ko'
         const j = (await r.json()) as { ok?: boolean }
         return j?.ok ? 'ok' : 'ko'
       }
@@ -153,8 +149,8 @@ export default function StatusPage() {
       if (id === 'opensubs') {
         const key = getOpensubsKey()
         if (!key) return 'ko'
-        const r = await fetch('https://api.opensubtitles.com/api/v1/subtitles?imdb_id=1101161&languages=fr', {
-          headers: { 'Api-Key': key, 'User-Agent': 'DZ STREAM' },
+        const r = await fetch('/api/opensubs/subtitles?imdb_id=1101161&languages=fr', {
+          headers: { 'x-os-key': key },
           signal: AbortSignal.timeout(8000),
         })
         return r.ok ? 'ok' : 'ko'
