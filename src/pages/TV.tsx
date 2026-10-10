@@ -233,7 +233,7 @@ export default function TVPage() {
       if (native || !Hls || !Hls.isSupported()) {
         v.src = proxied
       } else {
-        const hls = new Hls({ maxBufferLength: 30 })
+        const hls = new Hls({ maxBufferLength: 30, manifestLoadingMaxRetry: 1, levelLoadingMaxRetry: 2, fragLoadingMaxRetry: 2 })
         hlsRef.current = hls
         hls.on(Hls.Events.ERROR, (_e, data) => {
           if (data.fatal) { attempt += 1; tryCurrent() }
