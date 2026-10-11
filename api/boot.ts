@@ -103,9 +103,9 @@ app.use("/api/*", async (c, next) => {
     } catch { return c.json({ error: "Origine invalide" }, 403); }
   }
 
-  // Rate-limit par IP (sauf proxy d'images : les grilles d'affiches
+  // Rate-limit par IP (sauf proxys d'images, mangas compris : les grilles
   // declenchent des vagues de requêtes legitimes)
-  if (path !== "/api/img" && path !== "/api/imgproxy") {
+  if (path !== "/api/img" && path !== "/api/imgproxy" && path !== "/api/manga/proxy-img") {
     const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "local";
     if (!rateLimit(ip)) return c.json({ error: "Trop de requêtes" }, 429);
   }
