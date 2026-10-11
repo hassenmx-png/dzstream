@@ -20,6 +20,7 @@ function md(path: string): Promise<any> {
     await new Promise((r) => setTimeout(r, 250));
     const r = await fetch(MD + path, {
       headers: { "user-agent": "DZStream/2.0 (self-hosted manga reader)" },
+      signal: AbortSignal.timeout(15_000),
     });
     if (!r.ok) throw new Error("MangaDex HTTP " + r.status);
     return r.json();
@@ -62,7 +63,7 @@ async function writeLibrary(l: LibraryEntry[]) {
 /* ── Proxy images avec cache disque + retry URL fraîche ───── */
 async function fetchImage(url: string): Promise<{ buf: Buffer; type: string } | null> {
   try {
-    const r = await fetch(url, { headers: { accept: "image/*" } });
+    const r = await fetch(url, { headers: { accept: "image/*" }, signal: AbortSignal.timeout(20_000) });
     if (!r.ok) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     return { buf, type: r.headers.get("content-type") ?? "image/jpeg" };
@@ -117,7 +118,7 @@ mangaApp.get("/search", async (c) => {
 
 /* ensureCached : ramène une page dans le cache disque (avec retry nœud
  *  frais si l'URL a expiré) et renvoie le chemin local. */
-async function ensureCached(src: string, ch: string, idx: string): Promise<string | null> {
+async function ensureCachedInner(src: string, ch: string, idx: string): Promise<string | null> {
   const key = createHash("sha256").update(src).digest("hex");
   const path = `${CACHE_DIR}/${key}`;
   try {
@@ -143,6 +144,50 @@ async function ensureCached(src: string, ch: string, idx: string): Promise<strin
     await wf(path + ".json", JSON.stringify({ type: got.type }));
   } catch { /* cache best-effort */ }
   return path;
+}
+
+/* Sémaphore + dédup : TOUT téléchargement amont (proxy-img comme
+ *  préchauffage) passe par ici — max 3 connexions simultanées vers les
+ *  nœuds MangaDex, et N requêtes pour la même page = 1 téléchargement. */
+let imgActive = 0;
+const IMG_LANES = 5;
+const imgWaiters: { run: () => void; prio: boolean }[] = [];
+const imgInflight = new Map<string, Promise<string | null>>();
+
+function acquireImg(prio: boolean): Promise<void> {
+  if (imgActive < IMG_LANES) { imgActive++; return Promise.resolve(); }
+  return new Promise((res) => {
+    const w = { run: () => { imgActive++; res(); }, prio };
+    if (prio) {
+      // les pages demandées par le navigateur passent devant le préchauffage
+      const firstWarm = imgWaiters.findIndex((x) => !x.prio);
+      if (firstWarm === -1) imgWaiters.push(w); else imgWaiters.splice(firstWarm, 0, w);
+    } else imgWaiters.push(w);
+  });
+}
+
+async function ensureCached(src: string, ch: string, idx: string, prio = false): Promise<string | null> {
+  const key = createHash("sha256").update(src).digest("hex");
+  const path = `${CACHE_DIR}/${key}`;
+  try {
+    const st = await stat(path);
+    if (Date.now() - st.mtimeMs < CACHE_TTL) return path; // cache chaud : pas de file
+  } catch { /* pas en cache */ }
+
+  const running = imgInflight.get(key);
+  if (running) return running; // déjà en cours : on attend le même téléchargement
+
+  const p = (async () => {
+    await acquireImg(prio);
+    try { return await ensureCachedInner(src, ch, idx); }
+    finally {
+      imgActive--;
+      imgWaiters.shift()?.run();
+      imgInflight.delete(key);
+    }
+  })();
+  imgInflight.set(key, p);
+  return p;
 }
 
 /* Préchauffage d'arrière-plan : les nœuds MangaDex BRIDENT sévèrement les
@@ -183,7 +228,7 @@ mangaApp.get("/proxy-img", async (c) => {
     /^https:\/\/[a-z0-9-]+\.mangadex\.network\//.test(src);
   if (!allowed) return c.body(null, 400);
 
-  const path = await ensureCached(src, ch, idx);
+  const path = await ensureCached(src, ch, idx, true);
   if (!path) return c.body(null, 502);
 
   const buf = await rf(path);

@@ -390,7 +390,7 @@ function Reader({ manga, chapters, index }: { manga: Manga; chapters: Chapter[];
 
       {mode === 'webtoon' && pages?.map((u, i) => (
         <img key={`${chapter.id}-${i}`} data-pg src={u} alt={`Page ${i + 1}`}
-          loading="eager" draggable={false}
+          loading="lazy" draggable={false}
           className="mx-auto block w-full max-w-3xl select-none" />
       ))}
 
