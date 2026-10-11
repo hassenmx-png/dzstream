@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import Row from '@/components/Row'
+import CalendarSection from '@/components/CalendarSection'
+import { fetchCalendar, type CalEntry } from '@/lib/calendar'
 import type { MetaPreview } from '@/types'
 
 /**
@@ -49,7 +51,21 @@ function KitsuRow({ catalog, title }: { catalog: string; title: string }) {
   return <Row title={title} items={items} />
 }
 
+/** Calendrier de la semaine : épisodes des animés en cours de diffusion. */
+function AnimeWeekCalendar({ airing }: { airing: MetaPreview[] }) {
+  const [entries, setEntries] = useState<CalEntry[] | null>(null)
+  useEffect(() => {
+    let alive = true
+    if (airing.length > 0)
+      void fetchCalendar(airing.map((x) => ({ id: x.id, name: x.name, poster: x.poster })))
+        .then((e) => { if (alive) setEntries(e) })
+    return () => { alive = false }
+  }, [airing])
+  return <CalendarSection hasSeries={airing.length > 0} entries={entries} />
+}
+
 export default function Anime() {
+  const airing = useKitsu('kitsu-anime-airing')
   return (
     <div className="px-5 md:px-12 pt-28 pb-24 min-h-screen">
       <h1 className="font-display text-4xl md:text-6xl font-black tracking-tight">ANIMÉS.</h1>
@@ -57,8 +73,9 @@ export default function Anime() {
         Les sorties du Japon, en VF et VOSTFR. Touche une affiche, choisis ta source — la lecture
         reprend où tu l'avais laissée, comme partout dans l'app.
       </p>
+      <AnimeWeekCalendar airing={airing} />
       <div className="mt-8">
-        <KitsuRow catalog="kitsu-anime-airing" title="📡 En ce moment au Japon" />
+        {airing.length > 0 && <Row title="📡 En ce moment au Japon" items={airing} />}
         <KitsuRow catalog="kitsu-anime-trending" title="🔥 Tendances" />
         <KitsuRow catalog="kitsu-anime-popular" title="⭐ Populaires" />
         <KitsuRow catalog="kitsu-anime-rating" title="🏆 Les mieux notés" />

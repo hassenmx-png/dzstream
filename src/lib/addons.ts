@@ -1004,7 +1004,19 @@ function idPrefixMatches(manifest: AddonManifest, id: string): boolean {
 export async function fetchMetaAny(type: string, id: string): Promise<MetaFull | null> {
   const { fetchMeta } = await import('./cinemeta')
   const mt = (type === 'series' ? 'series' : 'movie') as 'movie' | 'series'
-  if (/^tt\d+/.test(id)) return fetchMeta(mt, id)
+  if (/^tt\d+/.test(id)) {
+    try {
+      return await fetchMeta(mt, id)
+    } catch { /* Cinemeta broute les rafales (429 sans CORS) : repli serveur */ }
+    try {
+      const r = await fetch(`/api/tmdb/frmeta/${mt}/${id}`)
+      if (r.ok) {
+        const j = (await r.json()) as { meta?: MetaFull }
+        if (j.meta?.id) return j.meta
+      }
+    } catch { /* ignorer */ }
+    return null
+  }
   const addons = getAddons().filter(
     (a) => a.enabled && hasResource(a.manifest, 'meta') && idPrefixMatches(a.manifest, id),
   )

@@ -3,6 +3,21 @@ import { X } from 'lucide-react'
 import { Mic, MicOff, Search as SearchIcon, User } from 'lucide-react'
 import type { MetaPreview } from '@/types'
 import { searchMeta } from '@/lib/cinemeta'
+
+/** Recherche animés via Kitsu (titres japonais romanisés inclus), mappée IMDb. */
+async function searchKitsu(query: string): Promise<MetaPreview[]> {
+  const r = await fetch(`https://anime-kitsu.strem.fun/catalog/anime/kitsu-anime-list/search=${encodeURIComponent(query)}.json`)
+  if (!r.ok) return []
+  const j = (await r.json()) as { metas?: { imdb_id?: string; type?: string; name?: string; poster?: string }[] }
+  return (j.metas ?? [])
+    .filter((x) => x.imdb_id && /^tt\d+/.test(x.imdb_id))
+    .map((x) => ({
+      id: x.imdb_id as string,
+      type: (x.type === 'movie' ? 'movie' : 'series') as 'movie' | 'series',
+      name: x.name ?? 'Animé',
+      poster: x.poster,
+    }))
+}
 import { departmentFr, searchPeople, type PersonResult } from '@/lib/tmdbApi'
 import { useNav } from '@/lib/nav'
 import PosterCard from '@/components/PosterCard'
@@ -28,6 +43,7 @@ export default function SearchPage() {
   const [movies, setMovies] = useState<MetaPreview[]>([])
   const [series, setSeries] = useState<MetaPreview[]>([])
   const [people, setPeople] = useState<PersonResult[]>([])
+  const [animes, setAnimes] = useState<MetaPreview[]>([])
   const [loading, setLoading] = useState(false)
   // Recherche vocale : dictée du nom d'un film/série au lieu de taper.
   // Utilise l'API Web Speech native (Chrome/Edge/Safari) — aucune dépendance.
@@ -98,15 +114,17 @@ export default function SearchPage() {
       setMovies([])
       setSeries([])
       setPeople([])
+      setAnimes([])
       return
     }
     debounce.current = setTimeout(async () => {
       setLoading(true)
       saveHistory(query)
-      const [m, s, p] = await Promise.allSettled([searchMeta('movie', query), searchMeta('series', query), searchPeople(query)])
+      const [m, s, p, a] = await Promise.allSettled([searchMeta('movie', query), searchMeta('series', query), searchPeople(query), searchKitsu(query)])
       setMovies(m.status === 'fulfilled' ? m.value : [])
       setSeries(s.status === 'fulfilled' ? s.value : [])
       setPeople(p.status === 'fulfilled' ? p.value : [])
+      setAnimes(a.status === 'fulfilled' ? a.value : [])
       setLoading(false)
     }, 350)
     return () => clearTimeout(debounce.current)
@@ -205,7 +223,7 @@ export default function SearchPage() {
         </div>
       )}
 
-      {!loading && query && movies.length === 0 && series.length === 0 && people.length === 0 && (
+      {!loading && query && movies.length === 0 && series.length === 0 && people.length === 0 && animes.length === 0 && (
         <p className="mt-10 text-white/60">Aucun résultat pour « {query} ».</p>
       )}
 
@@ -267,6 +285,18 @@ export default function SearchPage() {
           </div>
         </section>
       )}
+
+      {tab !== 'movie' && (() => {
+        const only = animes.filter((x) => !series.some((v) => v.id === x.id) && !movies.some((v) => v.id === x.id))
+        return only.length > 0 && (
+          <section className="mt-12">
+            <h2 className="bracket-label mb-4">Animés</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
+              {only.map((m) => <PosterCard key={m.id} meta={m} />)}
+            </div>
+          </section>
+        )
+      })()}
     </div>
   )
 }
