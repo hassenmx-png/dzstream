@@ -95,9 +95,18 @@ function isDeadVtt(vtt: string): boolean {
 
 /** Convertit un sous-titre SRT/VTT distant en texte VTT. */
 async function fetchVtt(url: string): Promise<string> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(9000) })
-  if (!res.ok) throw new Error('subtitles fetch failed')
-  const text = await res.text()
+  let text: string | null = null
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(9000) })
+    if (res.ok) text = await res.text()
+  } catch { /* CORS ou réseau : repli proxy ci-dessous */ }
+  if (text === null && /^https?:\/\//.test(url)) {
+    // Addons externes sans en-têtes CORS (UwU…) : on rapatrie via le serveur.
+    const res = await fetch(`/api/opensubs/ext?u=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(15000) })
+    if (!res.ok) throw new Error('subtitles fetch failed')
+    text = await res.text()
+  }
+  if (text === null) throw new Error('subtitles fetch failed')
   return text.startsWith('WEBVTT')
     ? text
     : 'WEBVTT\n\n' + text.replace(/\r/g, '').replace(/(\d{1,2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')

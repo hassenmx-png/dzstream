@@ -41,6 +41,33 @@ opensubsApp.post("/download", async (c) => {
   }
 });
 
+// Sous-titres d'addons externes (UwU, LooStream…) : leurs domaines
+// n'envoient pas d'en-têtes CORS → le navigateur les bloque. On rapatrie
+// via le serveur (restreint aux URL qui ressemblent à des sous-titres).
+opensubsApp.get("/ext", async (c) => {
+  const u = c.req.query("u") ?? "";
+  let url: URL;
+  try { url = new URL(u); } catch { return c.text("url invalide", 400); }
+  if (url.protocol !== "https:") return c.text("url invalide", 400);
+  const looksSub =
+    /\.(vtt|srt|ass|ssa)(\?|#|$)/i.test(u) ||
+    /sub/i.test(url.pathname) ||
+    /(creepso\.com|nipva\.com|strem\.fun)$/.test(url.hostname);
+  if (!looksSub) return c.text("pas un sous-titre", 400);
+  try {
+    const r = await fetch(u, {
+      signal: AbortSignal.timeout(15000),
+      headers: { accept: "text/vtt, text/plain, */*" },
+    });
+    if (!r.ok) return c.text("indisponible", 502);
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength > 3_000_000) return c.text("trop gros", 413);
+    return new Response(buf, { headers: { "content-type": "text/plain; charset=utf-8" } });
+  } catch {
+    return c.text("indisponible", 502);
+  }
+});
+
 // Le lien signé (dl.opensubtitles.com) est lui aussi sans CORS → proxifié.
 opensubsApp.get("/file", async (c) => {
   const u = c.req.query("u") ?? "";
