@@ -41,6 +41,7 @@ const TVPage = lazy(() => import('@/pages/TV'))
 const MangasPage = lazy(() => import('@/pages/Mangas'))
 const StatusPage = lazy(() => import('@/pages/Status'))
 const AdminPage = lazy(() => import('@/pages/Admin'))
+const AnimePage = lazy(() => import('@/pages/Anime'))
 
 /** Liens directs : décode le hash (#/films, #/ma-liste, #/detail/…) en vue. */
 export function hashToView(hash: string): View | null {
@@ -59,6 +60,7 @@ export function hashToView(hash: string): View | null {
     '/reglages': { name: 'settings' },
     '/tv': { name: 'tv' },
     '/mangas': { name: 'mangas' },
+    '/animes': { name: 'animes' },
     '/statut': { name: 'status' },
     '/admin': { name: 'admin' },
     '/parametres': { name: 'settings' },
@@ -88,6 +90,7 @@ function viewToHash(v: View): string | null {
     case 'settings': return '/reglages'
     case 'tv': return '/tv'
     case 'mangas': return '/mangas'
+    case 'animes': return '/animes'
     case 'status': return '/statut'
     case 'admin': return '/admin'
     case 'detail': return `/detail/${v.type}/${encodeURIComponent(v.id)}`
@@ -255,6 +258,7 @@ export default function App() {
           {view.name === 'tv' && <TVPage />}
           {view.name === 'admin' && <AdminPage />}
           {view.name === 'mangas' && <MangasPage />}
+          {view.name === 'animes' && <AnimePage />}
           {view.name === 'detail' && <DetailPage id={view.id} type={view.type} />}
           {view.name === 'person' && <PersonPage id={view.id} />}
           {view.name === 'shared' && <SharedListPage code={view.code} />}

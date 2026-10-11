@@ -143,6 +143,7 @@ export type View =
   | { name: 'settings' }
   | { name: 'tv' }
   | { name: 'mangas' }
+  | { name: 'animes' }
   | { name: 'status' }
   | { name: 'admin' }
   | { name: 'detail'; id: string; type: MediaType }

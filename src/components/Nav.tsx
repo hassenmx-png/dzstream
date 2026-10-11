@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, Bookmark, Film, Home, Layers, MonitorPlay, Palette, Search, Settings, Tv } from 'lucide-react'
+import { BookOpen, Bookmark, Film, Home, Layers, MonitorPlay, Palette, Search, Settings, Sparkles, Tv } from 'lucide-react'
 import { ACCENTS, getAccent, setAccent, type Accent } from '@/lib/theme'
 import ProfileMenu from '@/components/ProfileMenu'
 import CharSplit from './CharSplit'
@@ -12,6 +12,7 @@ const LINKS: { label: string; view: View; key: string }[] = [
   { label: 'ACCUEIL', view: { name: 'home' }, key: 'home' },
   { label: 'FILMS', view: { name: 'movies' }, key: 'movies' },
   { label: 'SÉRIES', view: { name: 'series' }, key: 'series' },
+  { label: 'ANIMÉS', view: { name: 'animes' }, key: 'animes' },
   { label: 'MA LISTE', view: { name: 'library' }, key: 'library' },
   { label: 'STATUT', view: { name: 'status' }, key: 'status' },
   { label: 'SCANS', view: { name: 'mangas' }, key: 'mangas' },
@@ -21,6 +22,7 @@ const TABS: { label: string; icon: typeof Home; view: View; key: string }[] = [
   { label: 'Accueil', icon: Home, view: { name: 'home' }, key: 'home' },
   { label: 'Films', icon: Film, view: { name: 'movies' }, key: 'movies' },
   { label: 'Séries', icon: Tv, view: { name: 'series' }, key: 'series' },
+  { label: 'Animés', icon: Sparkles, view: { name: 'animes' }, key: 'animes' },
   { label: 'TV', icon: MonitorPlay, view: { name: 'tv' }, key: 'tv' },
   { label: 'Ma Liste', icon: Bookmark, view: { name: 'library' }, key: 'library' },
   { label: 'Scans', icon: BookOpen, view: { name: 'mangas' }, key: 'mangas' },
