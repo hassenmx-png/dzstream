@@ -115,32 +115,17 @@ mangaApp.get("/search", async (c) => {
   return c.json(all.slice(0, 24));
 });
 
-mangaApp.get("/proxy-img", async (c) => {
-  const src = c.req.query("src") ?? "";
-  const ch = c.req.query("ch") ?? "";
-  const idx = c.req.query("i") ?? "";
-  const allowed =
-    src.startsWith("https://uploads.mangadex.org/") ||
-    /^https:\/\/[a-z0-9-]+\.mangadex\.network\//.test(src);
-  if (!allowed) return c.body(null, 400);
-
+/* ensureCached : ramène une page dans le cache disque (avec retry nœud
+ *  frais si l'URL a expiré) et renvoie le chemin local. */
+async function ensureCached(src: string, ch: string, idx: string): Promise<string | null> {
   const key = createHash("sha256").update(src).digest("hex");
   const path = `${CACHE_DIR}/${key}`;
-
   try {
     const st = await stat(path);
-    if (Date.now() - st.mtimeMs < CACHE_TTL) {
-      const buf = await rf(path);
-      const meta = JSON.parse(await rf(path + ".json", "utf8").catch(() => '{"type":"image/jpeg"}'));
-      const h = new Headers();
-      h.set("content-type", meta.type);
-      h.set("cache-control", "private, max-age=86400");
-      return new Response(new Uint8Array(buf), { headers: h });
-    }
+    if (Date.now() - st.mtimeMs < CACHE_TTL) return path;
   } catch { /* pas en cache */ }
 
   let got = await fetchImage(src);
-
   if (!got && ch && idx !== "") {
     try {
       const fresh = await md(`/at-home/server/${ch}`);
@@ -151,18 +136,62 @@ mangaApp.get("/proxy-img", async (c) => {
     } catch { /* retry src original */ }
     if (!got) got = await fetchImage(src);
   }
-  if (!got) return c.body(null, 502);
-
+  if (!got) return null;
   try {
     await mkdir(CACHE_DIR, { recursive: true });
     await wf(path, got.buf);
     await wf(path + ".json", JSON.stringify({ type: got.type }));
   } catch { /* cache best-effort */ }
+  return path;
+}
 
+/* Préchauffage d'arrière-plan : les nœuds MangaDex BRIDENT sévèrement les
+ *  connexions simultanées par IP (33 pages eager = tout se fige). On amène
+ *  donc les pages en cache 3 par 3 — le navigateur tape ensuite un cache
+ *  chaud et chaque page arrive instantanément. */
+const warmQueue: { src: string; ch: string; idx: string }[] = [];
+const warmInflight = new Set<string>();
+let warmActive = 0;
+
+async function drainWarm(): Promise<void> {
+  while (warmActive < 3 && warmQueue.length > 0) {
+    const job = warmQueue.shift()!;
+    const k = createHash("sha256").update(job.src).digest("hex");
+    warmActive++;
+    void ensureCached(job.src, job.ch, job.idx).finally(() => {
+      warmInflight.delete(k);
+      warmActive--;
+      void drainWarm();
+    });
+  }
+}
+
+function warmLater(src: string, ch: string, idx: string): void {
+  const k = createHash("sha256").update(src).digest("hex");
+  if (warmInflight.has(k)) return;
+  warmInflight.add(k);
+  warmQueue.push({ src, ch, idx });
+  void drainWarm();
+}
+
+mangaApp.get("/proxy-img", async (c) => {
+  const src = c.req.query("src") ?? "";
+  const ch = c.req.query("ch") ?? "";
+  const idx = c.req.query("i") ?? "";
+  const allowed =
+    src.startsWith("https://uploads.mangadex.org/") ||
+    /^https:\/\/[a-z0-9-]+\.mangadex\.network\//.test(src);
+  if (!allowed) return c.body(null, 400);
+
+  const path = await ensureCached(src, ch, idx);
+  if (!path) return c.body(null, 502);
+
+  const buf = await rf(path);
+  const meta = JSON.parse(await rf(path + ".json", "utf8").catch(() => '{"type":"image/jpeg"}'));
   const h = new Headers();
-  h.set("content-type", got.type);
+  h.set("content-type", meta.type);
   h.set("cache-control", "private, max-age=86400");
-  return new Response(new Uint8Array(got.buf), { headers: h });
+  return new Response(new Uint8Array(buf), { headers: h });
 });
 
 /* ── Détail / bibliothèque / chapitres / pages ────────────── */
@@ -282,9 +311,11 @@ mangaApp.get("/chapter/:cid/pages", async (c) => {
   return c.json(
     // data-saver : pages compressées (mobile-friendly) — et les nœuds lents
     // ou capricieux livrent ces variantes bien plus volontiers.
-    ((chapter.dataSaver ?? chapter.data) ?? []).map(
-      (f: string, i: number) => px(`${baseUrl}/data-saver/${chapter.hash}/${f}`) + `&ch=${cid}&i=${i}`,
-    ),
+    ((chapter.dataSaver ?? chapter.data) ?? []).map((f: string, i: number) => {
+      const raw = `${baseUrl}/data-saver/${chapter.hash}/${f}`;
+      warmLater(raw, cid, String(i)); // préchauffe le cache serveur (3 à la fois)
+      return px(raw) + `&ch=${cid}&i=${i}`;
+    }),
   );
 });
 
