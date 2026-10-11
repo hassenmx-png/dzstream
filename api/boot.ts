@@ -95,13 +95,16 @@ app.use("/api/*", async (c, next) => {
   const path = c.req.path;
   if (path === "/api/auth" || path === "/api/health") return next();
 
-  // CORS strict : seule l'origine du site (pas de *)
+  // CORS strict : seule l'origine du site — SAUF si le code d'accès est dans
+  // l'URL (liens VLC / Chromecast : le code vaut jeton, la TV envoie Origin).
+  const codeOk = !!ACCESS_CODE && c.req.query("code") === ACCESS_CODE;
   const origin = c.req.header("origin");
-  if (origin) {
+  if (origin && !codeOk) {
     try {
       if (new URL(origin).host !== new URL(c.req.url).host) return c.json({ error: "Origine refusée" }, 403);
     } catch { return c.json({ error: "Origine invalide" }, 403); }
   }
+  if (codeOk) c.header("Access-Control-Allow-Origin", "*");
 
   // Rate-limit par IP (sauf proxys d'images, mangas compris : les grilles
   // declenchent des vagues de requêtes legitimes)

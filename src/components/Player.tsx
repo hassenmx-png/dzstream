@@ -1233,7 +1233,14 @@ const [hud, setHud] = useState<{ kind: 'seek-left' | 'seek-right' | 'volume' | '
     if (kind === 'torrent' && torrentMode === 'webtor') return null
     const src = videoRef.current?.currentSrc ?? ''
     if (!src || src.startsWith('blob:')) return null
-    return new URL(src, window.location.href).href
+    const abs = new URL(src, window.location.href)
+    // Nos routes /api exigent le cookie — absent sur la TV. Le code d'accès
+    // en paramètre tient lieu de jeton (même mécanisme que les liens VLC).
+    if (abs.origin === window.location.origin && abs.pathname.startsWith('/api/')) {
+      const code = localStorage.getItem('accessCode') ?? ''
+      if (code) abs.searchParams.set('code', code)
+    }
+    return abs.href
   }
 
   const castContentType = (url: string): string => {
