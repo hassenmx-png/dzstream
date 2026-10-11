@@ -144,8 +144,10 @@ mangaApp.get("/proxy-img", async (c) => {
   if (!got && ch && idx !== "") {
     try {
       const fresh = await md(`/at-home/server/${ch}`);
-      const f2 = fresh.chapter.data?.[Number(idx)];
-      if (f2) got = await fetchImage(`${fresh.baseUrl}/data/${fresh.chapter.hash}/${f2}`);
+      const files = fresh.chapter.dataSaver ?? fresh.chapter.data;
+      const sub = fresh.chapter.dataSaver ? "data-saver" : "data";
+      const f2 = files?.[Number(idx)];
+      if (f2) got = await fetchImage(`${fresh.baseUrl}/${sub}/${fresh.chapter.hash}/${f2}`);
     } catch { /* retry src original */ }
     if (!got) got = await fetchImage(src);
   }
@@ -278,8 +280,10 @@ mangaApp.get("/chapter/:cid/pages", async (c) => {
   const d = await md(`/at-home/server/${cid}`);
   const { baseUrl, chapter } = d;
   return c.json(
-    (chapter.data ?? []).map(
-      (f: string, i: number) => px(`${baseUrl}/data/${chapter.hash}/${f}`) + `&ch=${cid}&i=${i}`,
+    // data-saver : pages compressées (mobile-friendly) — et les nœuds lents
+    // ou capricieux livrent ces variantes bien plus volontiers.
+    ((chapter.dataSaver ?? chapter.data) ?? []).map(
+      (f: string, i: number) => px(`${baseUrl}/data-saver/${chapter.hash}/${f}`) + `&ch=${cid}&i=${i}`,
     ),
   );
 });
