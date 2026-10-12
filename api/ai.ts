@@ -83,6 +83,82 @@ export async function translateFr(text?: string | null): Promise<string | undefi
   return out;
 }
 
+/* ── Suggestions cliquables : l'IA balise les titres, on les
+ *  résout en fiches (id IMDb + jaquette) via TMDB ──────────── */
+const TMDB_KEY = () => (process.env.TMDB_API_KEY || "").trim();
+
+async function tmdb(path: string): Promise<any> {
+  if (!TMDB_KEY()) return null;
+  try {
+    const sep = path.includes("?") ? "&" : "?";
+    const r = await fetch(
+      `https://api.themoviedb.org/3${path}${sep}api_key=${TMDB_KEY()}&language=fr-FR`,
+      { signal: AbortSignal.timeout(10_000) },
+    );
+    return r.ok ? r.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface AiItem {
+  title: string;
+  kind: "movie" | "series" | "anime" | "manga";
+  id?: string;
+  poster?: string;
+}
+
+const TAG_RE = /\[\[(FILM|S[ÉE]RIE|ANIM[ÉE]|MANGA)\s*:\s*([^\]]+)\]\]/gi;
+
+function kindOf(tag: string): AiItem["kind"] {
+  const t = tag.toUpperCase();
+  if (t.startsWith("FILM")) return "movie";
+  if (t.startsWith("ANIM")) return "anime";
+  if (t.startsWith("MANGA")) return "manga";
+  return "series";
+}
+
+async function resolveTitle(kind: AiItem["kind"], title: string): Promise<AiItem> {
+  if (kind === "manga") return { kind, title }; // pas de fiche détail manga cliquable (v1)
+  const enc = encodeURIComponent(title);
+  // animé : TMDB série d'abord, film ensuite (films d'animation)
+  const tries: ("movie" | "tv")[] = kind === "movie" ? ["movie"] : ["tv", "movie"];
+  for (const t of tries) {
+    const s = await tmdb(`/search/${t}?query=${enc}`);
+    const hit = s?.results?.[0];
+    if (!hit) continue;
+    const ext = await tmdb(`/${t}/${hit.id}/external_ids`);
+    return {
+      kind: t === "movie" ? "movie" : kind,
+      title: hit.title ?? hit.name ?? title,
+      id: ext?.imdb_id ?? undefined,
+      poster: hit.poster_path ? `https://image.tmdb.org/t/p/w342${hit.poster_path}` : undefined,
+    };
+  }
+  return { kind, title };
+}
+
+async function parseItems(reply: string): Promise<{ clean: string; items: AiItem[] }> {
+  const items: AiItem[] = [];
+  for (const m of reply.matchAll(TAG_RE)) {
+    if (items.length >= 6) break;
+    items.push({ kind: kindOf(m[1]), title: m[2].trim() });
+  }
+  const clean = reply.replace(TAG_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+  const resolved = await Promise.all(items.map((it) => resolveTitle(it.kind, it.title)));
+  // dédup par id/titre
+  const seen = new Set<string>();
+  return {
+    clean,
+    items: resolved.filter((it) => {
+      const k = it.id ?? `${it.kind}:${it.title.toLowerCase()}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }),
+  };
+}
+
 export const aiApp = new Hono();
 
 aiApp.post("/chat", async (c) => {
@@ -98,7 +174,11 @@ aiApp.post("/chat", async (c) => {
           "Tu réponds TOUJOURS en français, de façon concise et chaleureuse. " +
           "Quand on te demande quoi regarder ou lire, tu proposes 3 à 5 titres précis avec une phrase d'accroche chacun. " +
           "Tu peux répondre aux questions sur un titre (intrigue, casting, ordre de visionnage). " +
-          "Pas de disclaimers, pas de blabla.",
+          "Pas de disclaimers, pas de blabla. " +
+          "IMPORTANT : pour chaque titre que tu recommandes, ajoute en TOUTE FIN de réponse une ligne au format exact " +
+          "[[FILM: Titre original]] ou [[SÉRIE: Titre original]] ou [[ANIMÉ: Titre original]] ou [[MANGA: Titre original]] " +
+          "(titre original anglais/japonais de préférence). Ces lignes ne sont JAMAIS montrées à l'utilisateur : " +
+          "elles servent à créer des fiches cliquables. N'en parle pas dans ta réponse.",
       },
       ...msgs.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
@@ -109,7 +189,8 @@ aiApp.post("/chat", async (c) => {
     45_000,
   );
   if (!reply) return c.json({ error: "IA indisponible" }, 502);
-  return c.json({ reply });
+  const { clean, items } = await parseItems(reply);
+  return c.json({ reply: clean || reply, items });
 });
 
 aiApp.post("/translate", async (c) => {

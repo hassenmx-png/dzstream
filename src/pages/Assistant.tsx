@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bot, Loader2, Send, User } from 'lucide-react'
+import { useNav } from '@/lib/nav'
 
-type Msg = { role: 'user' | 'assistant'; content: string }
+type AiItem = { title: string; kind: 'movie' | 'series' | 'anime' | 'manga'; id?: string; poster?: string }
+type Msg = { role: 'user' | 'assistant'; content: string; items?: AiItem[] }
 
 const SUGGESTIONS = [
   'Quoi regarder ce soir ?',
@@ -12,6 +14,7 @@ const SUGGESTIONS = [
 
 export default function Assistant() {
   const [msgs, setMsgs] = useState<Msg[]>([])
+  const { go } = useNav()
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
@@ -34,7 +37,7 @@ export default function Assistant() {
         body: JSON.stringify({ messages: next }),
       })
       const d = await r.json().catch(() => ({}))
-      setMsgs([...next, { role: 'assistant', content: d.reply ?? "L'IA est saturée — réessaie dans une minute." }])
+      setMsgs([...next, { role: 'assistant', content: d.reply ?? "L'IA est saturée — réessaie dans une minute.", items: d.items }])
     } catch {
       setMsgs([...next, { role: 'assistant', content: 'Erreur réseau — réessaie.' }])
     } finally {
@@ -74,12 +77,40 @@ export default function Assistant() {
           {msgs.map((m, i) => (
             <div key={i} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {m.role === 'assistant' && <Bot size={18} className="mt-1 shrink-0 text-[rgb(var(--acc))]" aria-hidden />}
-              <div
-                className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
-                  m.role === 'user' ? 'bg-[rgb(var(--acc))] text-white' : 'bg-white/8 text-white/90'
-                }`}
-              >
-                {m.content}
+              <div className="max-w-[85%]">
+                <div
+                  className={`whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
+                    m.role === 'user' ? 'bg-[rgb(var(--acc))] text-white' : 'bg-white/8 text-white/90'
+                  }`}
+                >
+                  {m.content}
+                </div>
+                {m.items && m.items.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {m.items.map((it, j) =>
+                      it.id && it.kind !== 'manga' ? (
+                        <button
+                          key={j}
+                          onClick={() => go({ name: 'detail', type: it.kind === 'movie' ? 'movie' : 'series', id: it.id! })}
+                          className="group flex flex-col gap-1 text-left"
+                        >
+                          {it.poster ? (
+                            <img src={it.poster} alt={it.title} loading="lazy" className="aspect-[3/4] w-full rounded-sm object-cover transition group-hover:ring-2 group-hover:ring-[rgb(var(--acc))]" />
+                          ) : (
+                            <div className="flex aspect-[3/4] w-full items-center justify-center rounded-sm bg-white/5 text-[rgb(var(--acc))]">
+                              <Bot size={22} aria-hidden />
+                            </div>
+                          )}
+                          <span className="line-clamp-2 text-[10px] text-white/80">{it.title}</span>
+                        </button>
+                      ) : (
+                        <div key={j} className="flex items-center rounded-sm border border-white/10 bg-white/5 px-2 py-1.5">
+                          <span className="line-clamp-2 text-[10px] text-white/70">{it.title}</span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
               </div>
               {m.role === 'user' && <User size={18} className="mt-1 shrink-0 text-white/50" aria-hidden />}
             </div>
