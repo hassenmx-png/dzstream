@@ -11,6 +11,7 @@ import { opensubsApp } from "./opensubs";
 import { adminApp } from "./admin";
 import { imgApp } from "./imgproxy";
 import { mangaApp } from "./manga";
+import { aiApp } from "./ai";
 import { env } from "./lib/env";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -181,6 +182,7 @@ app.route("/api/img", imgApp);
 
 // Scans maison : UI propre dans l'app, Suwayomi reduit au role de backend.
 app.route("/api/manga", mangaApp);
+app.route("/api/ai", aiApp);
 
 // Version de déploiement : change à chaque redémarrage du serveur.
 // Le client la sonde régulièrement → propose de recharger après une publication.

@@ -42,6 +42,7 @@ const MangasPage = lazy(() => import('@/pages/Mangas'))
 const StatusPage = lazy(() => import('@/pages/Status'))
 const AdminPage = lazy(() => import('@/pages/Admin'))
 const AnimePage = lazy(() => import('@/pages/Anime'))
+const AssistantPage = lazy(() => import('@/pages/Assistant'))
 
 /** Liens directs : décode le hash (#/films, #/ma-liste, #/detail/…) en vue. */
 export function hashToView(hash: string): View | null {
@@ -61,6 +62,7 @@ export function hashToView(hash: string): View | null {
     '/tv': { name: 'tv' },
     '/mangas': { name: 'mangas' },
     '/animes': { name: 'animes' },
+    '/ia': { name: 'assistant' },
     '/statut': { name: 'status' },
     '/admin': { name: 'admin' },
     '/parametres': { name: 'settings' },
@@ -91,6 +93,7 @@ function viewToHash(v: View): string | null {
     case 'tv': return '/tv'
     case 'mangas': return '/mangas'
     case 'animes': return '/animes'
+    case 'assistant': return '/ia'
     case 'status': return '/statut'
     case 'admin': return '/admin'
     case 'detail': return `/detail/${v.type}/${encodeURIComponent(v.id)}`
@@ -250,6 +253,7 @@ export default function App() {
               catalogId={view.catalogId}
             />
           )}
+          {view.name === 'assistant' && <AssistantPage />}
           {view.name === 'search' && <SearchPage />}
           {view.name === 'library' && <LibraryPage />}
           {view.name === 'addons' && <AddonsPage />}

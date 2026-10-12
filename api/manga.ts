@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { readFile as rf, writeFile as wf } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { translateFr } from "./ai";
 
 const MD = "https://api.mangadex.org";
 const SUWAYOMI = "http://127.0.0.1:4567";
@@ -350,7 +351,7 @@ mangaApp.get("/:id", async (c) => {
   return c.json({
     id: m.id,
     title: pick(m.attributes.title, "en", "fr", "ja"),
-    description: pick(m.attributes.description, "fr", "en"),
+    description: await translateFr(pick(m.attributes.description, "fr", "en")),
     thumbnailUrl: px(coverOf(m)),
     inLibrary: lib.some((e) => e.id === m.id),
   });
