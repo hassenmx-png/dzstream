@@ -3,7 +3,7 @@
 // "No chapters found", plus de doublons vides (filtre natif
 // hasAvailableChapters), rate-limiting poli (250 ms entre requetes).
 import { Hono } from "hono";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { readFile as rf, writeFile as wf } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
@@ -12,6 +12,42 @@ const SUWAYOMI = "http://127.0.0.1:4567";
 const LIBRARY_FILE = "/root/work_v43/data/manga-library.json";
 const CACHE_DIR = "/root/work_v43/data/img-cache";
 const CACHE_TTL = 7 * 24 * 3600 * 1000; // 7 jours
+
+/* ── Mangas locaux (hébergés sur le VPS — ex. Bones, absent du
+ *  catalogue FR/EN de MangaDex) ───────────────────────────── */
+const LOCAL_DIR = "/root/work_v43/data/local-manga";
+const LOCAL_META: Record<string, { title: string; description: string }> = {
+  bones: {
+    title: "Bones",
+    description:
+      "Kang Jihyoung rêvait de devenir chasseur pour sa mère. Quand ses harceleurs la plongent dans un état végétatif, il tente de se venger mais se fait écraser et enfermer… Le garçon qui a tout perdu est devenu une bête et a commencé sa chasse. (Manhwa complet — 30 chapitres, EN)",
+  },
+};
+const cleanSeg = (s: string) => s.replace(/[^a-zA-Z0-9._-]/g, "");
+
+async function localChapters(slug: string): Promise<{ dir: string; num: number }[]> {
+  try {
+    const dirs = await readdir(`${LOCAL_DIR}/${slug}`, { withFileTypes: true });
+    return dirs
+      .filter((d) => d.isDirectory())
+      .map((d) => ({ dir: d.name, num: parseFloat(d.name.replace("-", ".")) }))
+      .filter((x) => !isNaN(x.num))
+      .sort((a, b) => b.num - a.num);
+  } catch {
+    return [];
+  }
+}
+
+async function localPageList(slug: string, dir: string): Promise<string[]> {
+  try {
+    const files = (await readdir(`${LOCAL_DIR}/${slug}/${dir}`))
+      .filter((f) => /\.jpe?g$/i.test(f))
+      .sort();
+    return files.map((f) => `/api/manga/local-page/${slug}/${dir}/${f}`);
+  } catch {
+    return [];
+  }
+}
 
 /* ── MangaDex helpers ─────────────────────────────────────── */
 let mdChain: Promise<void> = Promise.resolve();
@@ -78,7 +114,12 @@ mangaApp.get("/sources", (c) => c.json([{ id: "mangadex", name: "MangaDex", lang
 
 mangaApp.get("/library", async (c) => {
   const lib = await readLibrary();
-  return c.json(lib.map((m) => ({ ...m, thumbnailUrl: px(m.thumbnailUrl) })));
+  return c.json(
+    lib.map((m) => ({
+      ...m,
+      thumbnailUrl: m.thumbnailUrl?.startsWith("/api/") ? m.thumbnailUrl : px(m.thumbnailUrl),
+    })),
+  );
 });
 
 mangaApp.get("/search", async (c) => {
@@ -113,6 +154,19 @@ mangaApp.get("/search", async (c) => {
     if (ra !== rb) return ra - rb;
     return (norm(a.title) === nq ? 0 : 1) - (norm(b.title) === nq ? 0 : 1);
   });
+  for (const [slug, meta] of Object.entries(LOCAL_META)) {
+    if (norm(meta.title).includes(nq) || nq.includes(norm(meta.title))) {
+      const chs = await localChapters(slug);
+      if (chs.length)
+        all.unshift({
+          id: `local-${slug}`,
+          title: meta.title,
+          thumbnailUrl: `/api/manga/local-cover/${slug}`,
+          sourceName: "DZ STREAM · EN",
+          readableCount: chs.length,
+        });
+    }
+  }
   return c.json(all.slice(0, 24));
 });
 
@@ -277,6 +331,18 @@ mangaApp.get("/debrid-addon", async (c) => {
 
 mangaApp.get("/:id", async (c) => {
   const id = c.req.param("id");
+  if (id.startsWith("local-")) {
+    const meta = LOCAL_META[id.slice(6)];
+    if (!meta) return c.json({ error: "not found" }, 404);
+    const lib = await readLibrary();
+    return c.json({
+      id,
+      title: meta.title,
+      description: meta.description,
+      thumbnailUrl: `/api/manga/local-cover/${id.slice(6)}`,
+      inLibrary: lib.some((e) => e.id === id),
+    });
+  }
   const d = await md(`/manga/${id}?includes[]=cover_art`);
   const m = d.data;
   if (!m) return c.json({ error: "not found" }, 404);
@@ -298,6 +364,15 @@ mangaApp.post("/:id/library", async (c) => {
   const lib = await readLibrary();
   const i = lib.findIndex((e) => e.id === id);
   const target = body.inLibrary !== false;
+  if (id.startsWith("local-")) {
+    const meta = LOCAL_META[id.slice(6)];
+    if (!meta) return c.json({ error: "not found" }, 404);
+    if (target && i === -1)
+      lib.push({ id, title: meta.title, thumbnailUrl: `/api/manga/local-cover/${id.slice(6)}`, addedAt: Date.now() });
+    else if (!target && i >= 0) lib.splice(i, 1);
+    await writeLibrary(lib);
+    return c.json({ ok: true });
+  }
   if (target && i === -1) {
     const d = await md(`/manga/${id}?includes[]=cover_art`);
     lib.push({
@@ -315,6 +390,20 @@ mangaApp.post("/:id/library", async (c) => {
 
 mangaApp.get("/:id/chapters", async (c) => {
   const id = c.req.param("id");
+  if (id.startsWith("local-")) {
+    const slug = id.slice(6);
+    const chs = await localChapters(slug);
+    return c.json(
+      chs.map((x) => ({
+        id: `local-${slug}-${x.dir}`,
+        name: `Chapitre ${x.num}`,
+        chapterNumber: x.num,
+        volume: null,
+        scanlator: "AsuraScans",
+        lang: "en",
+      })),
+    );
+  }
   // FR d'abord ; si le manga n'a aucun chapitre FR (le catalogue FR de
   // MangaDex est pauvre pour la plupart des séries), on bascule sur l'anglais
   // plutôt que d'afficher une liste vide. Les chapitres EN sont étiquetés.
@@ -351,6 +440,11 @@ mangaApp.get("/:id/chapters", async (c) => {
 
 mangaApp.get("/chapter/:cid/pages", async (c) => {
   const cid = c.req.param("cid");
+  if (cid.startsWith("local-")) {
+    const rest = cid.slice(6);
+    const k = rest.indexOf("-");
+    return c.json(await localPageList(rest.slice(0, k), rest.slice(k + 1)));
+  }
   const d = await md(`/at-home/server/${cid}`);
   const { baseUrl, chapter } = d;
   return c.json(
@@ -362,6 +456,33 @@ mangaApp.get("/chapter/:cid/pages", async (c) => {
       return px(raw) + `&ch=${cid}&i=${i}`;
     }),
   );
+});
+
+/* ── Images locales (couvertures + pages hébergées) ───────── */
+mangaApp.get("/local-cover/:slug", async (c) => {
+  const slug = cleanSeg(c.req.param("slug"));
+  try {
+    const buf = await rf(`${LOCAL_DIR}/${slug}/cover.jpg`);
+    return new Response(new Uint8Array(buf), {
+      headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=86400" },
+    });
+  } catch {
+    return c.body(null, 404);
+  }
+});
+
+mangaApp.get("/local-page/:slug/:dir/:file", async (c) => {
+  const slug = cleanSeg(c.req.param("slug"));
+  const dir = cleanSeg(c.req.param("dir"));
+  const file = cleanSeg(c.req.param("file"));
+  try {
+    const buf = await rf(`${LOCAL_DIR}/${slug}/${dir}/${file}`);
+    return new Response(new Uint8Array(buf), {
+      headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=604800" },
+    });
+  } catch {
+    return c.body(null, 404);
+  }
 });
 
 /* ── Legacy : proxy images Suwayomi (anciennes entrées) ───── */

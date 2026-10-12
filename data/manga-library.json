@@ -148,5 +148,11 @@
     "title": "Battle Angel Alita: Panzer Kunst Chronicle",
     "thumbnailUrl": "https://uploads.mangadex.org/covers/eb0ac32a-452a-44f4-8df2-1aad97eaaa9c/d2ee5e50-b7f7-4d98-ab87-2cfce1b6e7a5.jpg.256.jpg",
     "addedAt": 1790000103271
+  },
+  {
+    "id": "local-bones",
+    "title": "Bones",
+    "thumbnailUrl": "/api/manga/local-cover/bones",
+    "addedAt": 1791818805346
   }
 ]
